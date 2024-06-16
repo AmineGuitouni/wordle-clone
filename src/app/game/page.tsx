@@ -6,7 +6,7 @@ export default async function GamePage() {
     const colRef = collection(db, "words")
     const q = query(colRef, limit(1), orderBy("createdAt", "desc"))
     const docs = (await getDocs(q)).docs
-    
+
     if(docs.length === 0){
         return (
             <div className="container mx-auto flex flex-col items-center h-[calc(100vh-6rem)]">
@@ -15,7 +15,7 @@ export default async function GamePage() {
         )
     }
 
-    const randomWord = docs[0].data().word
+    const randomWord = docs[0].data().word.toUpperCase()
     return (
         <div className="container mx-auto flex flex-col items-center">
             <div className="pt-12">
