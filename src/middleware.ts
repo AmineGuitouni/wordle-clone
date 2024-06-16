@@ -1,6 +1,5 @@
 import { getToken } from "next-auth/jwt";
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const pagetKanAuth:string[] = [
 ]
@@ -16,14 +15,13 @@ function checkLink(link:string, list:string[]){
     return false
 }
 
-export default withAuth(
-  async function middleware(req) {
-    const token = await getToken({ req });
+export default async function middleware(req:NextRequest) {
+  const token = await getToken({ req });
     
     const pathName = req.nextUrl.pathname
     
     if(pathName.startsWith("/api")){
-      return null
+      return NextResponse.next()
     }
 
     if(!token && pathName !== "/"){
@@ -32,15 +30,9 @@ export default withAuth(
     if(token && pathName === authanticationPage){
       return NextResponse.redirect(new URL("/game", req.url))
     }
-  },
-  {
-    callbacks: {
-      authorized() {
-        return true
-      },
-    },
-  }
-)
+
+    return NextResponse.next()
+}
 
 export const config = {
     matcher:["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"]
