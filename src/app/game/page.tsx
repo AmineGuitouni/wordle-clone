@@ -9,7 +9,7 @@ export default async function GamePage() {
 
     if(docs.length === 0){
         return (
-            <div className="container mx-auto flex flex-col items-center h-[calc(100vh-6rem)]">
+            <div className="container mx-auto flex items-center justify-center h-[calc(100vh-6rem)]">
                 <div className="text-3xl font-bold">No words found for the moment</div>
             </div>
         )

@@ -126,10 +126,14 @@ export async function GET(req:Request){
         return NextResponse.json("unauthorized", {status: 401})
     }
 
+    const validWords = WORDS.filter((word) => {
+        return word.length === 5
+    })
+
     try{
         const colRef = collection(db, "words")
         await addDoc(colRef, {
-            word: WORDS[Math.floor(Math.random() * WORDS.length)],
+            word: validWords[Math.floor(Math.random() * validWords.length)],
             createdAt: serverTimestamp()
         })
 
