@@ -1,23 +1,34 @@
 "use client"
 
+import { WordsList } from "@/lib/constants";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 export function ActiveBordRow({addWord, k, columns}: {addWord?: (word: string) => void, k: number, columns: number}) {
     const [word, setWord] = useState<string>("");
+    const [notValid, setNotValid] = useState(false);
 
     useEffect(()=>{
         const handler = (e: KeyboardEvent) => {
-            console.log(word)
             if(word.length < columns && e.key.match(/^[a-zA-Z]$/)){
                 setWord(prev=>prev+e.key.toUpperCase())
+                if(notValid){
+                    setNotValid(false)
+                }
             }
             else if(addWord && e.key === 'Enter' && word.length === columns){
-                addWord(word)
-                setWord('')
+                if(WordsList.includes(word.toLowerCase())){
+                    addWord(word)
+                    setWord('')
+                }else{
+                    setNotValid(true)
+                }
             }
             else if(e.key === 'Backspace' && word.length > 0){
                 setWord(prev=>prev.slice(0, -1))
+                if(notValid){
+                    setNotValid(false)
+                }
             }
         }
 
@@ -26,15 +37,18 @@ export function ActiveBordRow({addWord, k, columns}: {addWord?: (word: string) =
         return ()=>{
             window.removeEventListener('keydown', handler)
         }
-    },[word, addWord,columns])
+    },[word, addWord,columns,notValid])
 
     return(
         <div className="flex gap-2">
             {
                 Array.from({ length: columns }, (_, i) => (
-                    <motion.div animate={word.length === i + 1 ? {
-                        scale:[1, 1.2, 1]
-                    } : {}} initial={{scale: 1}} transition={{duration: 0.5}} 
+                    <motion.div animate={word.length === i + 1 && !notValid ? {
+                        scale:[1, 1.2, 1],
+                    } : {
+                        borderColor: notValid ? 'rgba(255, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+                        scale: notValid?[1, 1.1, 1]: undefined,
+                    }} initial={{scale: 1}} transition={{duration: 0.5}} 
                     key={`${k}-${i}`} 
                     className="size-16 text-2xl font-bold rounded-sm border border-opacity-70 flex justify-center items-center">
                         {word.length > i ? word[i] : ""}

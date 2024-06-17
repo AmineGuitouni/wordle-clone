@@ -1,7 +1,3 @@
-import { db } from "@/lib/firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { NextResponse } from "next/server"
-
 const WORDS = [
     "about", "above", "abuse", "actor", "acute", "adapt", "added", "adopt", "adult", "after",
     "again", "agent", "agree", "ahead", "alarm", "album", "alert", "alike", "alive", "allow",
@@ -120,27 +116,4 @@ const WORDS = [
     "young", "yours", "youth"
   ];
 
-export async function GET(req:Request){
-    const key = req.headers.get("key")
-    if(!key || key !== process.env.WEBHOOK_SECRET_KEY){
-        return NextResponse.json("unauthorized", {status: 401})
-    }
-
-    const validWords = WORDS.filter((word) => {
-        return word.length === 5
-    })
-
-    try{
-        const colRef = collection(db, "words")
-        await addDoc(colRef, {
-            word: validWords[Math.floor(Math.random() * validWords.length)],
-            createdAt: serverTimestamp()
-        })
-
-        return NextResponse.json("ok", {status: 200})
-    }
-    catch(e){
-        console.log(e)
-        return NextResponse.json("internal server error", {status: 401})
-    }
-}
+  export const WordsList = WORDS.filter((w)=>w.length===5);

@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react";
 import { ActiveBordRow, StaticBordRow } from "./BordRow";
+import { CheckWord } from "@/lib/actions";
 export default function GameBoard({
     rows,
     columns,
@@ -8,7 +9,7 @@ export default function GameBoard({
 }:{
     rows: number,
     columns: number,
-    randomWord: string
+    randomWord: string,
 }) {
     const [words, setWords] = useState<string[]>([]);
     const [win, setWin] = useState(false);
@@ -26,30 +27,22 @@ export default function GameBoard({
 
     const addWord = async (word: string) => {
         if(word.length === columns){
-            console.log(randomWord)
-            let colors = ['N', 'N', 'N', 'N', 'N']
-            for (let i = 0; i < 5; i++) {
-                if (word) {
-                    if (word[i] === randomWord[i]) {
-                        colors[i] = 'G'
-                    } else if (randomWord.includes(word[i])) {
-                        colors[i] = 'Y'
-                    } else {
-                        colors[i] = 'R'
-                    }
-                }
-            }
-
-            setResult(prev=>[...prev, colors])
-
             setWaiting(true)
-            setWords(prev => [...prev, word])
-            if(randomWord === word){
-                setWin(true);
-            }
-            new Promise(resolve => setTimeout(resolve, 1400)).then(
-                () => setWaiting(false)
-            )
+
+            CheckWord({word, encryptedWord: randomWord}).then(({colors, win})=>{
+                setWords(prev => [...prev, word])
+                setResult(prev=>[...prev, colors])
+                console.log("win", win)
+                if(win){
+                    setWin(true)
+                }
+                new Promise(resolve => setTimeout(resolve, 1400)).then(
+                    () => setWaiting(false)
+                )
+            }).catch(err=>{
+                console.log(err)
+                setWaiting(false)
+            })
         }
     }
 

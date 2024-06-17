@@ -1,5 +1,7 @@
 import GameBoard from "@/components/game/GameBoard";
 import { db } from "@/lib/firebase";
+import decrypt, { encrypt } from "@/lib/utils";
+import { randomBytes } from "crypto";
 import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
 
 export default async function GamePage() {
@@ -15,7 +17,8 @@ export default async function GamePage() {
         )
     }
 
-    const randomWord = docs[0].data().word.toUpperCase()
+    const randomWord = encrypt(docs[0].data().word.toUpperCase(), process.env.ENCREPTION_KEY!, process.env.ENCREPTION_IV!)
+
     return (
         <div className="container mx-auto flex flex-col items-center">
             <div className="pt-12">
