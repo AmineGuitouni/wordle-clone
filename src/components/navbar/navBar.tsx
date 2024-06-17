@@ -1,16 +1,22 @@
 "use client"
 import React from "react";
-import {Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Link, Button, User, PopoverContent, PopoverTrigger, Popover} from "@nextui-org/react";
+import {Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Link, Button, User, PopoverContent, PopoverTrigger, Popover, Avatar} from "@nextui-org/react";
 import { BiLogoWordpress } from "react-icons/bi";
 import LoginWithGoogleBtn from "../authantication/loginWithGoogleBtn";
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 import SigneOut from "../authantication/signeOut";
 import { Session } from "next-auth";
+import { useScreenSize } from "@/hooks/useScreenSize";
+
+import logo from "../../../public/6228c9669da9446176b9f711.png"
+import Image from "next/image";
 
 export default function NavBar({session}:{session:Session|null}) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const pathName = usePathname()
+
+  const {sm} = useScreenSize()
 
   return (
     <Navbar onMenuOpenChange={setIsMenuOpen} isBlurred maxWidth="2xl" isBordered>
@@ -20,7 +26,7 @@ export default function NavBar({session}:{session:Session|null}) {
           className="sm:hidden"
         />
         <NavbarBrand className="flex gap-2 text-xl">
-          <BiLogoWordpress className="text-2xl"/> <p className="font-bold text-inherit">Wordle</p>
+          <Image src={logo} alt="logo" width={80} height={80} className="contain-content" />
         </NavbarBrand>
       </NavbarContent>
 
@@ -41,14 +47,19 @@ export default function NavBar({session}:{session:Session|null}) {
           {session ? (
             <Popover placement="bottom" showArrow={true}>
             <PopoverTrigger>
-                <User
-                  className="cursor-pointer select-none"   
-                  name={session.user?.name ? session.user.name : "user"}
-                  description={session.user?.email ? session.user.email : "email"}
-                  avatarProps={{
-                    src: session.user?.image ? session.user.image : undefined
-                  }}
-                />
+                { !sm?
+                  <User
+                    className="cursor-pointer select-none"   
+                    name={session.user?.name ? session.user.name : "user"}
+                    description={session.user?.email ? session.user.email : "email"}
+                    avatarProps={{
+                      src: session.user?.image ? session.user.image : undefined
+                    }}
+                  />:
+                  <Avatar
+                    src={session.user?.image ? session.user.image : undefined}
+                  />
+                }
             </PopoverTrigger>
             <PopoverContent>
               <div className="px-1 py-2">
