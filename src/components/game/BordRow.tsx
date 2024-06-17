@@ -2,11 +2,11 @@
 
 import { WordsList } from "@/lib/constants";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useKeyBoardLetters } from "./Provider";
 
 export function ActiveBordRow({addWord, k, columns}: {addWord?: (word: string) => void, k: number, columns: number}) {
-    const [word, setWord] = useState<string>("");
-    const [notValid, setNotValid] = useState(false);
+    const {currentWord:word, setCurrentWord:setWord, notValid, setNotValid} = useKeyBoardLetters()
 
     useEffect(()=>{
         const handler = (e: KeyboardEvent) => {
@@ -37,7 +37,7 @@ export function ActiveBordRow({addWord, k, columns}: {addWord?: (word: string) =
         return ()=>{
             window.removeEventListener('keydown', handler)
         }
-    },[word, addWord,columns,notValid])
+    },[word, addWord, columns, notValid, setWord, setNotValid])
 
     return(
         <div className="flex gap-2">
@@ -50,7 +50,7 @@ export function ActiveBordRow({addWord, k, columns}: {addWord?: (word: string) =
                         scale: notValid?[1, 1.1, 1]: undefined,
                     }} initial={{scale: 1}} transition={{duration: 0.5}} 
                     key={`${k}-${i}`} 
-                    className="size-16 text-2xl font-bold rounded-sm border border-opacity-70 flex justify-center items-center">
+                    className="size-14 text-2xl font-bold rounded-sm border border-opacity-70 flex justify-center items-center">
                         {word.length > i ? word[i] : ""}
                     </motion.div>
                 ))
@@ -89,10 +89,10 @@ export function StaticBordRow({
                                     delay: i * 0.3,
                                 }
                             }
-                            className="size-16 text-2xl font-bold rounded-sm border border-opacity-70 flex justify-center items-center">
+                            className="size-14 text-2xl font-bold rounded-sm border border-opacity-70 flex justify-center items-center">
                             {word[i]}
                         </motion.div>:
-                        <div className="size-16 text-2xl font-bold rounded-sm border border-opacity-70 flex justify-center items-center"/>
+                        <div className="size-14 text-2xl font-bold rounded-sm border border-opacity-70 flex justify-center items-center"/>
                     }
                     </div>
                 ))

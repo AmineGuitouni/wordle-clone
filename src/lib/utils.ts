@@ -1,4 +1,10 @@
-import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
+import { createCipheriv, createDecipheriv } from 'crypto';
+import { ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
 const algorithm = 'aes-256-cbc';
 

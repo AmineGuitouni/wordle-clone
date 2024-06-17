@@ -1,8 +1,8 @@
 import GameBoard from "@/components/game/GameBoard";
+import { KeyBoardLettersProvider } from "@/components/game/Provider";
 import { db } from "@/lib/firebase";
-import decrypt, { encrypt } from "@/lib/utils";
-import { randomBytes } from "crypto";
-import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
+import { encrypt } from "@/lib/utils";
+import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
 
 export default async function GamePage() {
     const colRef = collection(db, "words")
@@ -20,9 +20,11 @@ export default async function GamePage() {
     const randomWord = encrypt(docs[0].data().word.toUpperCase(), process.env.ENCREPTION_KEY!, process.env.ENCREPTION_IV!)
 
     return (
-        <div className="container mx-auto flex flex-col items-center">
+        <div className="container mx-auto flex flex-col items-center max">
             <div className="pt-12">
-                <GameBoard rows={6} columns={5} randomWord={randomWord}/>
+                <KeyBoardLettersProvider>
+                    <GameBoard rows={6} columns={5} randomWord={randomWord}/>
+                </KeyBoardLettersProvider>
             </div>
         </div>
     )

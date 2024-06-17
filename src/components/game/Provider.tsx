@@ -8,12 +8,20 @@ const KeyBoardLettersContext = createContext<{
     AddLetters:([])=>void,
     rightLetters: string[],
     wrongLetters: string[],
-    missPlacedLetters: string[]
+    missPlacedLetters: string[],
+    setCurrentWord: React.Dispatch<React.SetStateAction<string>>,
+    currentWord: string,
+    notValid: boolean,
+    setNotValid: React.Dispatch<React.SetStateAction<boolean>>
 }>({
     AddLetters: (letters:letters)=>{},
     rightLetters: [],
     wrongLetters: [],
-    missPlacedLetters: []
+    missPlacedLetters: [],
+    setCurrentWord: () => {},
+    currentWord: "",
+    notValid: false,
+    setNotValid: () => {}
 })
 
 export function useKeyBoardLetters() {
@@ -24,6 +32,9 @@ export function KeyBoardLettersProvider({children}: {children: React.ReactNode})
     const [rightLetters, setRightLetters] = useState<string[]>([])
     const [wrongLetters, setWrongLetters] = useState<string[]>([])
     const [missPlacedLetters, setMissPlacedLetters] = useState<string[]>([])
+
+    const [currentWord, setCurrentWord] = useState<string>("")
+    const [notValid, setNotValid] = useState(false);
 
     const AddLetters = (letters:letters) => {
         letters.forEach(({letter, type}) => {
@@ -40,7 +51,7 @@ export function KeyBoardLettersProvider({children}: {children: React.ReactNode})
     }
 
     return (
-        <KeyBoardLettersContext.Provider value={{AddLetters, rightLetters, wrongLetters, missPlacedLetters}}>
+        <KeyBoardLettersContext.Provider value={{AddLetters, rightLetters, wrongLetters, missPlacedLetters, setCurrentWord, currentWord, notValid, setNotValid}}>
             {children}
         </KeyBoardLettersContext.Provider>
     )

@@ -1,7 +1,9 @@
 "use client"
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActiveBordRow, StaticBordRow } from "./BordRow";
 import { CheckWord } from "@/lib/actions";
+import Keyboard from "./keyboard";
+import { KeyBoardLettersProvider, useKeyBoardLetters } from "./Provider";
 export default function GameBoard({
     rows,
     columns,
@@ -16,23 +18,27 @@ export default function GameBoard({
     const [waiting, setWaiting] = useState(false);
     const [result, setResult] = useState<string[][]>([]);
 
-    if(words.length === 6){
-        if(!win){
-            // TODO: handle win
+    const {AddLetters} = useKeyBoardLetters()
+
+    useEffect(()=>{
+        if(words.length === 6 && !win){
+            console.log("lose")
         }
-        else{
-            // TODO: handle lose
+        else if(win){
+            console.log("win")
         }
-    }
+    },[win,words])
 
     const addWord = async (word: string) => {
         if(word.length === columns){
             setWaiting(true)
 
-            CheckWord({word, encryptedWord: randomWord}).then(({colors, win})=>{
+            CheckWord({word, encryptedWord: randomWord}).then(({colors, win, letters})=>{
                 setWords(prev => [...prev, word])
                 setResult(prev=>[...prev, colors])
-                console.log("win", win)
+
+                AddLetters(letters)
+
                 if(win){
                     setWin(true)
                 }
@@ -47,21 +53,24 @@ export default function GameBoard({
     }
 
     return(
-        <div className="flex flex-col gap-2"> 
-            {
-                Array.from({ length: rows }, (_, i) => (
-                    <div key={i}>
-                    {
-                        words.length > i ?
-                        <StaticBordRow k={i} word={words[i]} result={result[i]} columns={columns}/>:
-                        words.length === i && !win && !waiting?
-                        <ActiveBordRow k={i} addWord={addWord} columns={columns}/>:
-                        <StaticBordRow k={i} columns={columns}/>
-                    }
-                    </div>
-                ))
-            }
-            <div className="text-center">{win? "you win" : words.length === 6? "you lose" : ""}</div>
+        <div className="w-full min-h-[calc(100dvh-6rem)]">
+            <div className="flex flex-col gap-2 w-full items-center"> 
+                {
+                    Array.from({ length: rows }, (_, i) => (
+                        <div key={i}>
+                        {
+                            words.length > i ?
+                            <StaticBordRow k={i} word={words[i]} result={result[i]} columns={columns}/>:
+                            words.length === i && !win && !waiting?
+                            <ActiveBordRow k={i} addWord={addWord} columns={columns}/>:
+                            <StaticBordRow k={i} columns={columns}/>
+                        }
+                        </div>
+                    ))
+                }
+                <div className="text-center">{win? "you win" : words.length === 6? "you lose" : ""}</div>
+            </div>
+            <Keyboard AddWord={addWord}/>
         </div>
     )
 }
