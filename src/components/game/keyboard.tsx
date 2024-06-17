@@ -116,7 +116,6 @@ export default function Keyboard({AddWord}: {AddWord?: (word: string) => void}) 
                     onPress={() => {
                         if(AddWord && WordsList.includes(currentWord.toLowerCase())){
                             AddWord(currentWord)
-                            setCurrentWord("")
                         }
                         else{
                             setNotValid(true)

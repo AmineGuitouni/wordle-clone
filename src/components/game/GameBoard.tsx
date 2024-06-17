@@ -18,7 +18,7 @@ export default function GameBoard({
     const [waiting, setWaiting] = useState(false);
     const [result, setResult] = useState<string[][]>([]);
 
-    const {AddLetters} = useKeyBoardLetters()
+    const {AddLetters, setCurrentWord} = useKeyBoardLetters()
 
     useEffect(()=>{
         if(words.length === 6 && !win){
@@ -36,6 +36,7 @@ export default function GameBoard({
             CheckWord({word, encryptedWord: randomWord}).then(({colors, win, letters})=>{
                 setWords(prev => [...prev, word])
                 setResult(prev=>[...prev, colors])
+                setCurrentWord("")
 
                 AddLetters(letters)
 

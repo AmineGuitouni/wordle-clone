@@ -19,7 +19,6 @@ export function ActiveBordRow({addWord, k, columns}: {addWord?: (word: string) =
             else if(addWord && e.key === 'Enter' && word.length === columns){
                 if(WordsList.includes(word.toLowerCase())){
                     addWord(word)
-                    setWord('')
                 }else{
                     setNotValid(true)
                 }
