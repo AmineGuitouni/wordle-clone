@@ -1,6 +1,6 @@
 "use client"
 
-import { useContext, createContext, useState } from "react"
+import { useContext, createContext, useState, useLayoutEffect, useCallback } from "react"
 
 type letters = {letter: string, type: "right" | "wrong" | "missPlaced"}[]
 
@@ -28,7 +28,7 @@ export function useKeyBoardLetters() {
     return useContext(KeyBoardLettersContext)
 }
 
-export function KeyBoardLettersProvider({children}: {children: React.ReactNode}){
+export function KeyBoardLettersProvider({children, letters}: {children: React.ReactNode, letters:letters}) {
     const [rightLetters, setRightLetters] = useState<string[]>([])
     const [wrongLetters, setWrongLetters] = useState<string[]>([])
     const [missPlacedLetters, setMissPlacedLetters] = useState<string[]>([])
@@ -36,7 +36,7 @@ export function KeyBoardLettersProvider({children}: {children: React.ReactNode})
     const [currentWord, setCurrentWord] = useState<string>("")
     const [notValid, setNotValid] = useState(false);
 
-    const AddLetters = (letters:letters) => {
+    const AddLetters = useCallback((letters:letters) => {
         letters.forEach(({letter, type}) => {
             if(type === "right"){
                 setRightLetters(prev => [...prev, letter])
@@ -48,7 +48,13 @@ export function KeyBoardLettersProvider({children}: {children: React.ReactNode})
                 setMissPlacedLetters(prev => [...prev, letter])
             }
         })
-    }
+    },[setRightLetters, setWrongLetters, setMissPlacedLetters])
+
+    useLayoutEffect(() => {
+        if(letters.length > 0){
+            AddLetters(letters)
+        }
+    },[letters, AddLetters])
 
     return (
         <KeyBoardLettersContext.Provider value={{AddLetters, rightLetters, wrongLetters, missPlacedLetters, setCurrentWord, currentWord, notValid, setNotValid}}>

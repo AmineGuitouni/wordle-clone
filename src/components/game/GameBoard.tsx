@@ -3,20 +3,29 @@ import { useEffect, useState } from "react";
 import { ActiveBordRow, StaticBordRow } from "./BordRow";
 import { CheckWord } from "@/lib/actions";
 import Keyboard from "./keyboard";
-import { KeyBoardLettersProvider, useKeyBoardLetters } from "./Provider";
+import { useKeyBoardLetters } from "./Provider";
 export default function GameBoard({
     rows,
     columns,
-    randomWord,
+    history
 }:{
     rows: number,
     columns: number,
-    randomWord: string,
+    history:{
+        words:string[],
+        colors:string[],
+    }
 }) {
-    const [words, setWords] = useState<string[]>([]);
-    const [win, setWin] = useState(false);
+    const [words, setWords] = useState<string[]>(history.words);
+    const [win, setWin] = useState(()=>{
+        if(history.words.length > 0){
+            return history.colors[history.colors.length - 1] === 'G-G-G-G-G'
+        }else{
+            return false
+        }
+    });
     const [waiting, setWaiting] = useState(false);
-    const [result, setResult] = useState<string[][]>([]);
+    const [result, setResult] = useState<string[][]>(history.colors.map(c=>c.split('-')));
 
     const {AddLetters, setCurrentWord} = useKeyBoardLetters()
 
@@ -31,9 +40,8 @@ export default function GameBoard({
 
     const addWord = async (word: string) => {
         if(word.length === columns){
-            setWaiting(true)
-
-            CheckWord({word, encryptedWord: randomWord}).then(({colors, win, letters})=>{
+            await CheckWord({word}).then(({colors, win, letters})=>{
+                setWaiting(true)
                 setWords(prev => [...prev, word])
                 setResult(prev=>[...prev, colors])
                 setCurrentWord("")
@@ -54,7 +62,7 @@ export default function GameBoard({
     }
 
     return(
-        <div className="w-full min-h-[calc(100dvh-6rem)]">
+        <div className="w-full">
             <div className="flex flex-col gap-2 w-full items-center"> 
                 {
                     Array.from({ length: rows }, (_, i) => (

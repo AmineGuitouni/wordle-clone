@@ -23,4 +23,13 @@ export const authOptions:AuthOptions = {
         strategy: "jwt",
     },
     secret: process.env.NEXTAUTH_SECRET,
+    callbacks:{
+        async session({session, token}){
+            if(token.sub){
+                session.user.id = token.sub
+            }
+
+            return session
+        }
+    }
 }

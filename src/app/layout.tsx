@@ -48,9 +48,11 @@ export default async function RootLayout({
                   />
                 ))}
               </div>
-              <main className="w-[100dvw] flex flex-col h-[100svh] overflow-y-hidden">
+              <main className="flex flex-col h-[100svh]">
                 <NavBar session={session}/>
-                {children}
+                <div className="w-full flex-grow max-h-[calc(100%-4rem)]">
+                  {children}
+                </div>
               </main>
             </NextUiProviders>
           </body>

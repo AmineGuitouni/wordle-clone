@@ -2,14 +2,15 @@
 
 import { WordsList } from "@/lib/constants";
 import { motion } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useKeyBoardLetters } from "./Provider";
 
-export function ActiveBordRow({addWord, k, columns}: {addWord?: (word: string) => void, k: number, columns: number}) {
+export function ActiveBordRow({addWord, k, columns}: {addWord?: (word: string) => Promise<void>, k: number, columns: number}) {
     const {currentWord:word, setCurrentWord:setWord, notValid, setNotValid} = useKeyBoardLetters()
-
+    const [waiting, setWaiting] = useState(false)
     useEffect(()=>{
-        const handler = (e: KeyboardEvent) => {
+        const handler = async (e: KeyboardEvent) => {
+            if(waiting) return
             if(word.length < columns && e.key.match(/^[a-zA-Z]$/)){
                 setWord(prev=>prev+e.key.toUpperCase())
                 if(notValid){
@@ -18,7 +19,8 @@ export function ActiveBordRow({addWord, k, columns}: {addWord?: (word: string) =
             }
             else if(addWord && e.key === 'Enter' && word.length === columns){
                 if(WordsList.includes(word.toLowerCase())){
-                    addWord(word)
+                    setWaiting(true)
+                    addWord(word).then(()=>{setWaiting(false)})
                 }else{
                     setNotValid(true)
                 }
@@ -36,7 +38,7 @@ export function ActiveBordRow({addWord, k, columns}: {addWord?: (word: string) =
         return ()=>{
             window.removeEventListener('keydown', handler)
         }
-    },[word, addWord, columns, notValid, setWord, setNotValid])
+    },[word, addWord, columns, notValid, setWord, setNotValid, waiting])
 
     return(
         <div className="flex gap-2">

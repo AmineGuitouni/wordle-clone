@@ -36,7 +36,14 @@ export default function NavBar({session}:{session:Session|null}) {
             Game
           </Link>
         </NavbarItem>
-        <NavbarItem isActive>
+        
+        <NavbarItem>
+          <Link size="lg" as={NextLink} color="foreground" href="/leaderboard" underline={pathName === "/leaderboard" ? "always" : "none"} aria-current="page">
+            Leaderboard
+          </Link>
+        </NavbarItem>
+
+        <NavbarItem>
           <Link size="lg" as={NextLink} color="foreground" href="#" underline={pathName === "/about" ? "always" : "none"} aria-current="page">
             About
           </Link>
