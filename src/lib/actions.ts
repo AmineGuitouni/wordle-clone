@@ -109,7 +109,7 @@ export async function CheckWord({word}:{word: string}){
     }
 
     for (let i = 0; i < 5; i++) {
-        if (word[i] !== '_' && randomWord.includes(word[i])) {
+        if (word[i] !== '_' && randomWord.slice(i).includes(word[i])) {
             letters.push({letter: word[i], type: 'missPlaced'})
             colors[i] = 'Y'
             randomWord = randomWord.replace(word[i], '_')

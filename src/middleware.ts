@@ -16,22 +16,22 @@ function checkLink(link:string, list:string[]){
 }
 
 export default async function middleware(req:NextRequest) {
-  const token = await getToken({ req });
+  // const token = await getToken({ req });
     
-    const pathName = req.nextUrl.pathname
+  //   const pathName = req.nextUrl.pathname
     
-    if(pathName.startsWith("/api")){
-      return NextResponse.next()
-    }
+  //   if(pathName.startsWith("/api")){
+  //     return NextResponse.next()
+  //   }
 
-    if(!token && pathName !== "/"){
-      return NextResponse.redirect(new URL(authanticationPage, req.url))
-    }
-    if(token && pathName === authanticationPage){
-      return NextResponse.redirect(new URL("/game", req.url))
-    }
+  //   if(!token && pathName !== "/"){
+  //     return NextResponse.redirect(new URL(authanticationPage, req.url))
+  //   }
+  //   if(token && pathName === authanticationPage){
+  //     return NextResponse.redirect(new URL("/game", req.url))
+  //   }
 
-    return NextResponse.next()
+  //   return NextResponse.next()
 }
 
 export const config = {
