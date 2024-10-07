@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 
 export default async function GamePage() {
     const session = await getServerSession(authOptions)
-    if(!session) redirect("/");
+    if(!session) return null;
 
     const colRef = collection(db, "words")
     const q = query(colRef, limit(1), orderBy("createdAt", "desc"))
