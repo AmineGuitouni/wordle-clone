@@ -5,7 +5,7 @@ import { useContext, createContext, useState, useLayoutEffect, useCallback } fro
 type letters = {letter: string, type: "right" | "wrong" | "missPlaced"}[]
 
 const KeyBoardLettersContext = createContext<{
-    AddLetters:([])=>void,
+    AddLetters:(letters: letters)=>void,
     rightLetters: string[],
     wrongLetters: string[],
     missPlacedLetters: string[],

@@ -1,32 +1,28 @@
 import GameBoard from "@/components/game/GameBoard";
 import { KeyBoardLettersProvider } from "@/components/game/Provider";
-import { authOptions } from "@/lib/authOptions";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
-import { getServerSession } from "next-auth";
+import { auth } from "@/auth";
+import { getDb, type HistoryDocument, type WordDocument } from "@/lib/mongodb";
 import { redirect } from "next/navigation";
+ 
+export const dynamic = "force-dynamic";
 
 export default async function GamePage() {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if(!session) redirect("/");
 
-    const colRef = collection(db, "words")
-    const q = query(colRef, limit(1), orderBy("createdAt", "desc"))
-    const docs = (await getDocs(q)).docs
+    const db = await getDb();
+    const todayDocument = await db.collection<WordDocument>("words").findOne({}, { sort: { createdAt: -1 } });
 
-    if(docs.length === 0){
+    if(!todayDocument){
         throw new Error('No word found')
     }
 
-    const toDaysWord = docs[0].data().word as string
+    const toDaysWord = todayDocument.word
 
-    const col = collection(db, "users-history")
-    const qry = query(col, where("userId", "==", session.user.id),orderBy("createdAt", "desc"), limit(1))
-
-    const docsHistory = (await getDocs(qry)).docs
-    if(docsHistory.length > 1){
-        throw new Error("unexpected error")
-    }
+    const historyDocument = await db.collection<HistoryDocument>("users-history").findOne(
+        { userId: session.user.id },
+        { sort: { createdAt: -1 } },
+    );
 
     let history:{words:string[], colors:string[], letters:{letter: string, type: "right" | "wrong" | "missPlaced"}[]} = {
         words:[],
@@ -34,8 +30,8 @@ export default async function GamePage() {
         letters:[]
     }
 
-    if(docsHistory.length === 1 && docsHistory[0].data().toDaysWord === toDaysWord){
-        history = docsHistory[0].data() as any
+    if(historyDocument && historyDocument.toDaysWord === toDaysWord){
+        history = historyDocument
     }
 
     return (

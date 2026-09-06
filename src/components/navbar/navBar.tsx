@@ -1,8 +1,8 @@
 "use client"
 import React from "react";
-import {Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Link, Button, User, PopoverContent, PopoverTrigger, Popover, Avatar} from "@nextui-org/react";
+import {Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Link, Button, User, PopoverContent, PopoverTrigger, Popover, Avatar} from "@heroui/react";
 import { BiLogoWordpress } from "react-icons/bi";
-import LoginWithGoogleBtn from "../authantication/loginWithGoogleBtn";
+import GuestLoginForm from "../authantication/guestLoginForm";
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 import SigneOut from "../authantication/signeOut";
@@ -58,7 +58,7 @@ export default function NavBar({session}:{session:Session|null}) {
                   <User
                     className="cursor-pointer select-none"   
                     name={session.user?.name ? session.user.name : "user"}
-                    description={session.user?.email ? session.user.email : "email"}
+                    description={session.user?.email ?? "Guest player"}
                     avatarProps={{
                       src: session.user?.image ? session.user.image : undefined
                     }}
@@ -74,7 +74,7 @@ export default function NavBar({session}:{session:Session|null}) {
               </div>
             </PopoverContent>
           </Popover>
-          ) :<LoginWithGoogleBtn/>}
+          ) :<GuestLoginForm compact />}
         </NavbarItem>
       </NavbarContent>
       <NavbarMenu>

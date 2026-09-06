@@ -1,6 +1,5 @@
 import { WordsList } from "@/lib/constants";
-import { db } from "@/lib/firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { getDb, type WordDocument } from "@/lib/mongodb";
 import { NextResponse } from "next/server"
 
 export async function GET(req:Request){
@@ -10,11 +9,11 @@ export async function GET(req:Request){
     }
 
     try{
-        const colRef = collection(db, "words")
-        await addDoc(colRef, {
+        const db = await getDb();
+        await db.collection<WordDocument>("words").insertOne({
             word: WordsList[Math.floor(Math.random() * WordsList.length)],
-            createdAt: serverTimestamp()
-        })
+            createdAt: new Date(),
+        });
 
         return NextResponse.json("ok", {status: 200})
     }

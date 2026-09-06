@@ -1,11 +1,12 @@
-import LoginWithGoogleBtn from "@/components/authantication/loginWithGoogleBtn";
-import { authOptions } from "@/lib/authOptions";
-import { getServerSession } from "next-auth";
+import GuestLoginForm from "@/components/authantication/guestLoginForm";
+import { auth } from "@/auth";
 import NextImage from "next/image";
 import GuessTheGameImage from "../../public/6228c9669da9446176b9f711.png"
+ 
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
 
   return (
     <div className="container mx-auto h-full flex-grow flex flex-col justify-center items-center gap-4">
@@ -17,7 +18,7 @@ export default async function Home() {
         height={150}
       />
       <p className="text-3xl font-bold w-[400px] text-center">Get 6 chances to guess a 5 letter word.</p>
-      <LoginWithGoogleBtn text="play" color="secondary" className="px-12 text-xl font-semibold py-6"/>
+      <GuestLoginForm buttonText="Play" color="secondary" />
     </div>
   );
 }

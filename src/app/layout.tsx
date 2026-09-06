@@ -7,8 +7,7 @@ import AppSession from "@/contexts/AppSession";
 import NavBar from "@/components/navbar/navBar";
 import { GoDot } from "react-icons/go";
 import { GoDotFill } from "react-icons/go";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { auth } from "@/auth";
 
 export const metadata: Metadata = {
   title: "wordle",
@@ -28,10 +27,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
   return (
     <html lang="en" suppressHydrationWarning>
-      <AppSession>
+      <AppSession session={session}>
         <AOSProvider>
           <body>
             <NextUiProviders>

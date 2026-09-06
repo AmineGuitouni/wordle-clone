@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@nextui-org/react"
+import { Button } from "@heroui/react"
 import { useKeyBoardLetters } from "./Provider"
 import { AiOutlineEnter } from "react-icons/ai";
 import { IoBackspaceOutline } from "react-icons/io5";

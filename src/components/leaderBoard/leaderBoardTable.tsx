@@ -1,5 +1,5 @@
 "use client"
-import {Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, User} from "@nextui-org/react";
+import {Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, User} from "@heroui/react";
 
 export default function ScoresTable({ Data }:{
     Data:{
