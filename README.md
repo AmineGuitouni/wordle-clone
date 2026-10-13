@@ -156,6 +156,7 @@ docker run -d --name guess-the-word-redis -p 6379:6379 redis:7   # optional; the
 | `MONGODB_DB`           |    ✅    | Database name                                                                       |
 | `AUTH_SECRET`          |    ✅    | Signs session cookies. Generate with `npx auth secret` or `openssl rand -base64 33` |
 | `WEBHOOK_SECRET_KEY`   |    ✅    | Authorises the daily word rotation webhook                                          |
+| `CRON_SECRET`          |  Vercel  | Same value as `WEBHOOK_SECRET_KEY`; Vercel Cron sends it as a bearer token          |
 | `REDIS_URL`            |    —     | `redis://` or `rediss://` URL. Without it a per-process in-memory cache is used     |
 | `CACHE_NAMESPACE`      |    —     | Key prefix (default `gtw`); lets staging and production share one Redis             |
 | `POW_DIFFICULTY_BITS`  |    —     | Base proof-of-work difficulty, 0–28 (default `16`)                                  |
@@ -216,15 +217,21 @@ curl -X POST https://your-app.example.com/api/webhooks/updatetodaysword \
   -H "key: $WEBHOOK_SECRET_KEY"
 ```
 
-Vercel Cron sends `Authorization: Bearer $CRON_SECRET`, so set `CRON_SECRET` and `WEBHOOK_SECRET_KEY` to the same value
-if you use it. The new word is never the same as the previous one, and everyone starts a fresh game.
+The new word is never the same as the previous one, and everyone starts a fresh game.
+
+**On Vercel** the schedule is already configured in [`vercel.json`](vercel.json): a `GET` to the webhook every day at
+00:00 UTC. Vercel Cron authenticates with `Authorization: Bearer $CRON_SECRET`, so set `CRON_SECRET` to the same value
+as `WEBHOOK_SECRET_KEY`. Crons only run on production deployments. On the Hobby plan a job may run once a day and fires
+at some point within the hour (not exactly at 00:00), and delivery is best effort, so a missed run simply keeps
+yesterday's word until the next one.
 
 ## Deploying
 
 1. Create a MongoDB Atlas cluster and allow your host's IPs.
 2. Create a Redis instance (e.g. Upstash or Redis Cloud) and use its `rediss://` URL as `REDIS_URL`.
 3. Import the repository into Vercel (or any Node host) and set the environment variables above.
-4. Schedule the rotation webhook.
+4. On Vercel the rotation cron comes from `vercel.json`; set `CRON_SECRET` equal to `WEBHOOK_SECRET_KEY`. Elsewhere,
+   schedule a call to the webhook yourself.
 
 ## Project structure
 
