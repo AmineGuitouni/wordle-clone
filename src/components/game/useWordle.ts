@@ -15,6 +15,7 @@ const MESSAGE_MS = 1800;
 
 const ERROR_MESSAGES: Record<GuessError, string> = {
   unauthenticated: "Your session expired. Please start again.",
+  rate_limited: "Too many guesses. Slow down for a moment.",
   invalid_word: "Not in word list",
   game_over: "This game has already finished.",
   out_of_sync: "Your game changed in another tab. Reloading…",

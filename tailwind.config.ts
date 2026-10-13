@@ -26,6 +26,10 @@ const config: Config = {
   darkMode: "class",
   theme: {
     extend: {
+      screens: {
+        // A phone on its side (or any very short window): the game switches to a two-column layout.
+        short: { raw: "(max-height: 520px) and (orientation: landscape)" },
+      },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         display: ["var(--font-display)", "var(--font-sans)", "system-ui", "sans-serif"],

@@ -70,9 +70,20 @@
 
 @layer components {
   .board {
-    /* Fit the whole game in the viewport: 27rem is the space taken by the navbar, header, keyboard and padding. */
-    --tile-size: max(2.25rem, min(3.75rem, 15vw, calc((100svh - 27rem) / 6)));
+    /*
+     * Fit the whole game in the viewport: 28rem is what the navbar, header, message row, keyboard and padding
+     * take. Tiles shrink down to 2rem on tiny phones and grow up to 4.5rem on big monitors.
+     */
+    --tile-size: max(2rem, min(4.5rem, 15vw, calc((100svh - 28rem) / 6)));
     --tile-gap: 0.375rem;
+  }
+
+  /* Landscape phones: the keyboard sits beside the board, so the board only has to share height with the navbar. */
+  @media (max-height: 520px) and (orientation: landscape) {
+    .board {
+      --tile-size: max(1.75rem, min(3.25rem, calc((100svh - 11rem) / 6)));
+      --tile-gap: 0.25rem;
+    }
   }
 
   .tile {
@@ -89,6 +100,15 @@
   .tile[data-filled="true"] {
     border-color: var(--tile-border-filled);
     animation: tile-pop 120ms ease-out;
+  }
+
+  /*
+   * Waiting for the server: the row ripples left to right with a highlighted border. The initial delay keeps it
+   * from flashing when the answer comes back instantly. Reduced-motion users get a static highlight instead.
+   */
+  .tile[data-pending="true"] {
+    animation: tile-wait 1000ms ease-in-out infinite;
+    animation-delay: calc(140ms + var(--i, 0) * 100ms);
   }
 
   .tile[data-state="correct"] {
@@ -133,7 +153,7 @@
   /* ---------- On-screen keyboard ---------- */
 
   .key {
-    height: clamp(2.9rem, 7.2svh, 3.6rem);
+    height: clamp(2.5rem, 7.2svh, 3.6rem);
     @apply flex min-w-0 flex-1 select-none items-center justify-center rounded-md text-sm font-semibold uppercase outline-none transition-colors duration-150 sm:text-base;
     background-color: var(--key-bg);
     color: var(--key-fg);
@@ -167,6 +187,19 @@
 @keyframes tile-pop {
   50% {
     transform: scale(1.12);
+  }
+}
+
+@keyframes tile-wait {
+  0%,
+  55%,
+  100% {
+    transform: translateY(0);
+    border-color: var(--tile-border-filled);
+  }
+  25% {
+    transform: translateY(-0.35rem);
+    border-color: hsl(var(--heroui-primary));
   }
 }
 
@@ -234,5 +267,9 @@
   .tile,
   .board-row {
     animation: none !important;
+  }
+
+  .tile[data-pending="true"] {
+    border-color: hsl(var(--heroui-primary));
   }
 }

@@ -25,7 +25,7 @@ function initials(name: string): string {
 function Rank({ position }: { position: number }) {
   const medal = MEDALS[position - 1];
   return (
-    <span className="flex w-8 justify-center font-display text-lg font-bold text-foreground/60">
+    <span className="flex w-8 justify-center font-display text-base font-bold text-foreground/60 sm:text-lg">
       {medal ? <medal.Icon className={cn("size-6", medal.className)} aria-label={`Rank ${position}`} /> : position}
     </span>
   );
@@ -64,9 +64,9 @@ export default function LeaderboardTable({ entries }: { entries: LeaderboardEntr
       <ol>
         {entries.map((entry, index) => (
           <li
-            key={entry.id}
+            key={index}
             className={cn(
-              "grid grid-cols-[3rem_1fr_auto] items-center gap-3 border-b border-foreground/5 px-4 py-3 last:border-b-0 sm:grid-cols-[3rem_1fr_5rem_5rem_6rem] sm:px-5",
+              "grid grid-cols-[2rem_1fr_auto] items-center gap-2 sm:gap-3 border-b border-foreground/5 px-3 py-3 last:border-b-0 sm:grid-cols-[3rem_1fr_5rem_5rem_6rem] sm:px-5",
               entry.isCurrentUser && "bg-primary/10",
             )}
           >
@@ -75,13 +75,13 @@ export default function LeaderboardTable({ entries }: { entries: LeaderboardEntr
             <div className="flex min-w-0 items-center gap-3">
               <span
                 aria-hidden
-                className="grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold text-white"
+                className="grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold text-white sm:size-9"
                 style={{ backgroundColor: `hsl(${hueFromName(entry.name)} 55% 42%)` }}
               >
                 {initials(entry.name)}
               </span>
               <div className="min-w-0">
-                <p className="truncate font-semibold">
+                <p className="truncate font-semibold" title={entry.name}>
                   {entry.name}
                   {entry.isCurrentUser && (
                     <span className="ml-2 rounded-full bg-primary/20 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-primary">

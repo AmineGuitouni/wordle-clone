@@ -1,6 +1,6 @@
 "use client";
 
-import { LuCornerDownLeft, LuDelete } from "react-icons/lu";
+import { LuCornerDownLeft, LuDelete, LuLoaderCircle } from "react-icons/lu";
 import type { TileState } from "@/lib/game/rules";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,8 @@ const ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"] as const;
 
 type KeyboardProps = {
   keyStates: Record<string, TileState>;
+  /** A guess is being checked: the Enter key shows a spinner. */
+  isSubmitting?: boolean;
   onLetter: (letter: string) => void;
   onEnter: () => void;
   onBackspace: () => void;
@@ -17,12 +19,14 @@ function Key({
   label,
   state,
   className,
+  busy,
   onPress,
   children,
 }: {
   label: string;
   state?: TileState;
   className?: string;
+  busy?: boolean;
   onPress: () => void;
   children: React.ReactNode;
 }) {
@@ -31,6 +35,7 @@ function Key({
       type="button"
       aria-label={state ? `${label}, ${state}` : label}
       data-state={state}
+      aria-busy={busy || undefined}
       className={cn("key", className)}
       onClick={(event) => {
         onPress();
@@ -44,7 +49,7 @@ function Key({
   );
 }
 
-export default function Keyboard({ keyStates, onLetter, onEnter, onBackspace }: KeyboardProps) {
+export default function Keyboard({ keyStates, isSubmitting, onLetter, onEnter, onBackspace }: KeyboardProps) {
   return (
     <div
       role="group"
@@ -54,8 +59,12 @@ export default function Keyboard({ keyStates, onLetter, onEnter, onBackspace }: 
       {ROWS.map((row, index) => (
         <div key={row} className={cn("flex gap-1.5 sm:gap-2", index === 1 && "px-[5%]")}>
           {index === 2 && (
-            <Key label="Enter" className="flex-[1.6]" onPress={onEnter}>
-              <LuCornerDownLeft className="size-5" />
+            <Key label="Enter" className="flex-[1.6]" busy={isSubmitting} onPress={onEnter}>
+              {isSubmitting ? (
+                <LuLoaderCircle className="size-5 animate-spin" aria-hidden />
+              ) : (
+                <LuCornerDownLeft className="size-5" />
+              )}
             </Key>
           )}
           {[...row].map((letter) => (

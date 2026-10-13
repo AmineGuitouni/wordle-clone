@@ -13,6 +13,10 @@ jobs:
         image: mongo:7
         ports:
           - 27017:27017
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,10 +27,11 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
-      - name: Test (unit + MongoDB integration)
+      - name: Test (unit + MongoDB and Redis integration)
         run: npm test
         env:
           TEST_MONGODB_URI: mongodb://localhost:27017
+          TEST_REDIS_URL: redis://localhost:6379/1
       - name: Build
         run: npm run build
         env:

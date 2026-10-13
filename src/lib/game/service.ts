@@ -1,6 +1,7 @@
 import "server-only";
 import { MongoServerError } from "mongodb";
 import type { UpdateFilter } from "mongodb";
+import { getCache } from "@/lib/cache";
 import { getCollections, type GameDocument } from "@/lib/db";
 import { evaluateGuess, getGameStatus } from "./rules";
 import { calculateScore } from "./score";
@@ -9,8 +10,22 @@ import { pickRandomWord } from "./words";
 
 const DUPLICATE_KEY_ERROR = 11000;
 
-/** The newest word is today's word. A fresh deployment is seeded so it is playable before the cron fires. */
-export async function getTodaysWord(): Promise<string> {
+/** Cache keys and lifetimes. Writers that change the underlying data delete the matching key. */
+export const CACHE_KEYS = {
+  todaysWord: "word:today",
+  leaderboard: (word: string) => `leaderboard:${word}`,
+} as const;
+const WORD_CACHE_TTL_SECONDS = 60;
+const LEADERBOARD_CACHE_TTL_SECONDS = 15;
+const LEADERBOARD_CACHE_SIZE = 50;
+
+/** The newest word is today's word. Cached briefly, since every page view and guess needs it. */
+export function getTodaysWord(): Promise<string> {
+  return getCache().getOrSet(CACHE_KEYS.todaysWord, WORD_CACHE_TTL_SECONDS, loadTodaysWord);
+}
+
+/** A fresh deployment is seeded so it is playable before the cron fires. */
+async function loadTodaysWord(): Promise<string> {
   const { words } = await getCollections();
   const latest = await words.findOne({}, { sort: { createdAt: -1 } });
   if (latest) return latest.word;
@@ -30,6 +45,7 @@ export async function rotateTodaysWord(): Promise<void> {
   const { words } = await getCollections();
   const latest = await words.findOne({}, { sort: { createdAt: -1 } });
   await words.insertOne({ word: pickRandomWord(latest?.word), createdAt: new Date() });
+  await getCache().del(CACHE_KEYS.todaysWord);
 }
 
 export function buildGameView(guesses: readonly string[], answer: string): GameView {
@@ -100,6 +116,8 @@ export async function submitGuess(input: { userId: string; name: string; guess: 
     return { ok: false, error: "out_of_sync" };
   }
 
+  if (status === "won") await getCache().del(CACHE_KEYS.leaderboard(answer));
+
   return {
     ok: true,
     result,
@@ -108,8 +126,18 @@ export async function submitGuess(input: { userId: string; name: string; guess: 
   };
 }
 
-/** Today's fastest solvers, best score first. */
-export async function getLeaderboard(answer: string, currentUserId?: string, limit = 10): Promise<LeaderboardEntry[]> {
+/** Updates a player's display name everywhere it is shown. Their identity (and games) stay the same. */
+export async function renamePlayer(userId: string, name: string): Promise<void> {
+  const { games } = await getCollections();
+  const { modifiedCount } = await games.updateMany({ userId, name: { $ne: name } }, { $set: { name } });
+  if (modifiedCount > 0) {
+    await getCache().del(CACHE_KEYS.leaderboard(await getTodaysWord()));
+  }
+}
+
+type RankedPlayer = Omit<LeaderboardEntry, "isCurrentUser"> & { userId: string };
+
+async function rankSolvedGames(answer: string, limit: number): Promise<RankedPlayer[]> {
   const { games } = await getCollections();
   // `won` is missing on games saved before losses were tracked; those only ever had a finishedAt when won.
   const solved = await games
@@ -124,17 +152,24 @@ export async function getLeaderboard(answer: string, currentUserId?: string, lim
       if (!game.finishedAt) return [];
       const tries = game.words.length;
       const timeMs = game.finishedAt.getTime() - game.createdAt.getTime();
-      return [
-        {
-          id: game.userId,
-          name: game.name ?? "Guest",
-          tries,
-          timeMs,
-          score: calculateScore(tries, timeMs),
-          isCurrentUser: game.userId === currentUserId,
-        },
-      ];
+      return [{ userId: game.userId, name: game.name ?? "Guest", tries, timeMs, score: calculateScore(tries, timeMs) }];
     })
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
+}
+
+/**
+ * Today's fastest solvers, best score first. The ranking is cached for a few seconds (and dropped as soon as a
+ * game is won or a name changes); only the per-viewer "isCurrentUser" flag is computed on each call.
+ */
+export async function getLeaderboard(answer: string, currentUserId?: string, limit = 10): Promise<LeaderboardEntry[]> {
+  const ranked =
+    limit <= LEADERBOARD_CACHE_SIZE
+      ? await getCache().getOrSet(CACHE_KEYS.leaderboard(answer), LEADERBOARD_CACHE_TTL_SECONDS, () =>
+          rankSolvedGames(answer, LEADERBOARD_CACHE_SIZE),
+        )
+      : await rankSolvedGames(answer, limit);
+
+  // The internal user id (a device identity) is deliberately not exposed to other players.
+  return ranked.slice(0, limit).map(({ userId, ...entry }) => ({ ...entry, isCurrentUser: userId === currentUserId }));
 }

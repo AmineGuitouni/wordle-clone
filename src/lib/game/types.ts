@@ -9,13 +9,13 @@ export type GameView = {
   answer: string | null;
 };
 
-export type GuessError = "unauthenticated" | "invalid_word" | "game_over" | "out_of_sync" | "server_error";
+export type GuessError =
+  "unauthenticated" | "rate_limited" | "invalid_word" | "game_over" | "out_of_sync" | "server_error";
 
 export type GuessResult =
   { ok: true; result: TileState[]; status: GameStatus; answer: string | null } | { ok: false; error: GuessError };
 
 export type LeaderboardEntry = {
-  id: string;
   name: string;
   tries: number;
   timeMs: number;

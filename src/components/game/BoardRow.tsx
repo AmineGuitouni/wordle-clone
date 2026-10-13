@@ -10,6 +10,8 @@ type BoardRowProps = {
   /** Bounce the row after the reveal because it solved the puzzle. */
   win?: boolean;
   shake?: boolean;
+  /** The guess is waiting for the server's verdict. */
+  pending?: boolean;
   rowNumber: number;
 };
 
@@ -19,7 +21,7 @@ const STATE_LABEL: Record<TileState, string> = {
   absent: "not in the word",
 };
 
-export default function BoardRow({ letters, states, reveal, win, shake, rowNumber }: BoardRowProps) {
+export default function BoardRow({ letters, states, reveal, win, shake, pending, rowNumber }: BoardRowProps) {
   return (
     <div
       role="row"
@@ -38,6 +40,7 @@ export default function BoardRow({ letters, states, reveal, win, shake, rowNumbe
             aria-label={letter ? `${letter}${state ? `, ${STATE_LABEL[state]}` : ""}` : "empty"}
             data-filled={letter && !state ? "true" : undefined}
             data-state={state}
+            data-pending={pending && letter ? "true" : undefined}
             data-reveal={reveal ? "true" : undefined}
             data-win={reveal && win ? "true" : undefined}
             className="tile"
