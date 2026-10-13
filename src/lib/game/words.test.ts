@@ -1,0 +1,36 @@
+import { describe, expect, it } from "vitest";
+import { WORD_LENGTH } from "./rules";
+import { isValidWord, pickRandomWord, WORDS } from "./words";
+
+describe("WORDS", () => {
+  it("only contains unique lowercase words of the right length", () => {
+    expect(WORDS.length).toBeGreaterThan(1000);
+    expect(new Set(WORDS).size).toBe(WORDS.length);
+    for (const word of WORDS) {
+      expect(word).toMatch(new RegExp(`^[a-z]{${WORD_LENGTH}}$`));
+    }
+  });
+});
+
+describe("isValidWord", () => {
+  it("is case-insensitive", () => {
+    expect(isValidWord("world")).toBe(true);
+    expect(isValidWord("WORLD")).toBe(true);
+  });
+
+  it("rejects unknown words", () => {
+    expect(isValidWord("zzzzz")).toBe(false);
+  });
+});
+
+describe("pickRandomWord", () => {
+  it("returns a dictionary word", () => {
+    expect(isValidWord(pickRandomWord())).toBe(true);
+  });
+
+  it("never returns the excluded word", () => {
+    for (let i = 0; i < 200; i++) {
+      expect(pickRandomWord("world")).not.toBe("world");
+    }
+  });
+});

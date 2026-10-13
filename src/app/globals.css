@@ -1,3 +1,238 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ---------- Design tokens ---------- */
+
+:root {
+  --tile-correct: #5a9b52;
+  --tile-present: #c8a72c;
+  --tile-absent: #6b7385;
+  --tile-border: #cdd3e2;
+  --tile-border-filled: #8590a8;
+  --tile-fg: #0f172a;
+
+  --key-bg: #d9deeb;
+  --key-fg: #0f172a;
+  --key-bg-hover: #cbd2e4;
+  --key-absent-bg: #6b7385;
+  --key-absent-fg: #ffffff;
+}
+
+.dark {
+  --tile-correct: #4d9150;
+  --tile-present: #b8982a;
+  --tile-absent: #343c52;
+  --tile-border: #2a3250;
+  --tile-border-filled: #5b6788;
+  --tile-fg: #f1f4ff;
+
+  --key-bg: #2a3250;
+  --key-fg: #eef1fb;
+  --key-bg-hover: #36405f;
+  --key-absent-bg: #141929;
+  --key-absent-fg: #7d87a8;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply min-h-dvh bg-background font-sans text-foreground antialiased;
+  }
+
+  /* Soft brand glow and dotted grid behind every page. */
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  body::before {
+    background:
+      radial-gradient(60rem 38rem at 50% -12%, hsl(var(--heroui-primary) / 0.22), transparent 65%),
+      radial-gradient(42rem 30rem at 105% 105%, hsl(var(--heroui-primary) / 0.12), transparent 70%);
+  }
+
+  body::after {
+    background-image: radial-gradient(hsl(var(--heroui-foreground) / 0.09) 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 25%, transparent 75%);
+  }
+}
+
+/* ---------- Game tiles ---------- */
+
+@layer components {
+  .board {
+    /* Fit the whole game in the viewport: 27rem is the space taken by the navbar, header, keyboard and padding. */
+    --tile-size: max(2.25rem, min(3.75rem, 15vw, calc((100svh - 27rem) / 6)));
+    --tile-gap: 0.375rem;
+  }
+
+  .tile {
+    --tile-bg: transparent;
+    width: var(--tile-size);
+    height: var(--tile-size);
+    font-size: calc(var(--tile-size) * 0.55);
+    @apply grid select-none place-items-center rounded-lg border-2 font-sans font-extrabold uppercase leading-none;
+    border-color: var(--tile-border);
+    color: var(--tile-fg);
+    background-color: var(--tile-bg);
+  }
+
+  .tile[data-filled="true"] {
+    border-color: var(--tile-border-filled);
+    animation: tile-pop 120ms ease-out;
+  }
+
+  .tile[data-state="correct"] {
+    --tile-bg: var(--tile-correct);
+  }
+  .tile[data-state="present"] {
+    --tile-bg: var(--tile-present);
+  }
+  .tile[data-state="absent"] {
+    --tile-bg: var(--tile-absent);
+  }
+
+  .tile[data-state="correct"],
+  .tile[data-state="present"],
+  .tile[data-state="absent"] {
+    border-color: var(--tile-bg);
+    color: #fff;
+  }
+
+  /*
+   * Flip to reveal: the colour swaps while the tile is edge-on, one tile after another.
+   * --i is the tile's column and --d an optional delay for the whole row (both set inline).
+   * Keep the timings in sync with useWordle.ts.
+   */
+  .tile[data-reveal="true"] {
+    animation: tile-flip 600ms ease-in-out both;
+    animation-delay: calc(var(--d, 0ms) + var(--i, 0) * 280ms);
+  }
+
+  /* After the last tile has flipped (4 * 280ms + 600ms), the winning row hops in a wave. */
+  .tile[data-reveal="true"][data-win="true"] {
+    animation:
+      tile-flip 600ms ease-in-out both,
+      tile-bounce 700ms ease-in-out;
+    animation-delay: calc(var(--d, 0ms) + var(--i, 0) * 280ms), calc(var(--d, 0ms) + 1750ms + var(--i, 0) * 90ms);
+  }
+
+  .board-row[data-shake="true"] {
+    animation: row-shake 450ms ease-in-out;
+  }
+
+  /* ---------- On-screen keyboard ---------- */
+
+  .key {
+    height: clamp(2.9rem, 7.2svh, 3.6rem);
+    @apply flex min-w-0 flex-1 select-none items-center justify-center rounded-md text-sm font-semibold uppercase outline-none transition-colors duration-150 sm:text-base;
+    background-color: var(--key-bg);
+    color: var(--key-fg);
+    touch-action: manipulation;
+  }
+
+  .key:hover:not(:disabled) {
+    background-color: var(--key-bg-hover);
+  }
+  .key:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+  .key:focus-visible {
+    @apply ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  .key[data-state="correct"] {
+    background-color: var(--tile-correct);
+    color: #fff;
+  }
+  .key[data-state="present"] {
+    background-color: var(--tile-present);
+    color: #fff;
+  }
+  .key[data-state="absent"] {
+    background-color: var(--key-absent-bg);
+    color: var(--key-absent-fg);
+  }
+}
+
+@keyframes tile-pop {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes tile-flip {
+  0% {
+    transform: rotateX(0);
+    background-color: transparent;
+    border-color: var(--tile-border-filled);
+    color: var(--tile-fg);
+  }
+  49.9% {
+    transform: rotateX(90deg);
+    background-color: transparent;
+    border-color: var(--tile-border-filled);
+    color: var(--tile-fg);
+  }
+  50% {
+    transform: rotateX(90deg);
+    background-color: var(--tile-bg);
+    border-color: var(--tile-bg);
+    color: #fff;
+  }
+  100% {
+    transform: rotateX(0);
+    background-color: var(--tile-bg);
+    border-color: var(--tile-bg);
+    color: #fff;
+  }
+}
+
+@keyframes tile-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-0.9rem);
+  }
+  60% {
+    transform: translateY(0.15rem);
+  }
+}
+
+@keyframes row-shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(3px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-6px);
+  }
+  40%,
+  60% {
+    transform: translateX(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .board-row {
+    animation: none !important;
+  }
+}

@@ -1,38 +1,49 @@
 {
-  "name": "wordle",
+  "name": "guess-the-word",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
-    "@auth/mongodb-adapter": "^3.11.3",
     "@heroui/react": "~2.7.11",
-    "aos": "^2.3.4",
     "clsx": "^2.1.1",
     "framer-motion": "^13.1.0",
     "mongodb": "^6.21.0",
-    "next": "16.3.1",
+    "next": "^16.4.0",
     "next-auth": "^5.0.0-beta.32",
     "next-themes": "^0.4.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
+    "server-only": "^0.0.1",
     "sharp": "^0.35.3",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@types/aos": "^3.0.8",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "eslint": "^9.39.5",
-    "eslint-config-next": "16.3.1",
+    "eslint-config-next": "^16.4.0",
+    "eslint-config-prettier": "^10.1.8",
     "postcss": "^8.5.26",
+    "prettier": "^3.9.10",
     "tailwindcss": "^3.4.19",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.4"
+  },
+  "description": "A Wordle-style daily word game built with Next.js, Auth.js and MongoDB.",
+  "engines": {
+    "node": ">=20.9"
   }
 }

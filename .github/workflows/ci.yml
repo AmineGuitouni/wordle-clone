@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - name: Test (unit + MongoDB integration)
+        run: npm test
+        env:
+          TEST_MONGODB_URI: mongodb://localhost:27017
+      - name: Build
+        run: npm run build
+        env:
+          # The build never connects to the database; these only need to be present.
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB: ci
+          AUTH_SECRET: ci-only-secret

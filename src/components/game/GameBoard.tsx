@@ -1,85 +1,83 @@
-"use client"
-import { useEffect, useState } from "react";
-import { ActiveBordRow, StaticBordRow } from "./BordRow";
-import { CheckWord } from "@/lib/actions";
-import Keyboard from "./keyboard";
-import { useKeyBoardLetters } from "./Provider";
-export default function GameBoard({
-    rows,
-    columns,
-    history
-}:{
-    rows: number,
-    columns: number,
-    history:{
-        words:string[],
-        colors:string[],
-    }
-}) {
-    const [words, setWords] = useState<string[]>(history.words);
-    const [win, setWin] = useState(()=>{
-        if(history.words.length > 0){
-            return history.colors[history.colors.length - 1] === 'G-G-G-G-G'
-        }else{
-            return false
-        }
-    });
-    const [waiting, setWaiting] = useState(false);
-    const [result, setResult] = useState<string[][]>(history.colors.map(c=>c.split('-')));
+"use client";
 
-    const {AddLetters, setCurrentWord} = useKeyBoardLetters()
+import { Button } from "@heroui/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import { LuCircleHelp } from "react-icons/lu";
+import { MAX_ATTEMPTS } from "@/lib/game/rules";
+import type { GameView } from "@/lib/game/types";
+import BoardRow from "./BoardRow";
+import HowToPlayModal from "./HowToPlayModal";
+import Keyboard from "./Keyboard";
+import ResultPanel from "./ResultPanel";
+import { useWordle } from "./useWordle";
 
-    useEffect(()=>{
-        if(words.length === 6 && !win){
-            console.log("lose")
-        }
-        else if(win){
-            console.log("win")
-        }
-    },[win,words])
+export default function GameBoard({ initialGame }: { initialGame: GameView }) {
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const { game, current, message, isShaking, revealRow, keyStates, isFinished, typeLetter, backspace, submit } =
+    useWordle(initialGame);
 
-    const addWord = async (word: string) => {
-        if(word.length === columns){
-            await CheckWord({word}).then(({colors, win, letters})=>{
-                setWaiting(true)
-                setWords(prev => [...prev, word])
-                setResult(prev=>[...prev, colors])
-                setCurrentWord("")
+  const activeRow = game.status === "playing" ? game.guesses.length : -1;
 
-                AddLetters(letters)
+  return (
+    <div className="flex w-full flex-1 flex-col items-center gap-3 px-4 pb-4 pt-3 sm:pt-5">
+      {/* The wrapper shrink-wraps the board so the header and messages line up with it. */}
+      <div className="board flex w-fit flex-col gap-3">
+        <header className="flex w-full items-center justify-between gap-4">
+          <div>
+            <h1 className="font-display text-xl font-bold leading-tight sm:text-2xl">Today&apos;s word</h1>
+            <p className="text-xs text-foreground/60" aria-live="polite">
+              {game.status === "playing"
+                ? `Guess ${Math.min(game.guesses.length + 1, MAX_ATTEMPTS)} of ${MAX_ATTEMPTS}`
+                : `${game.guesses.length} of ${MAX_ATTEMPTS} used`}
+            </p>
+          </div>
+          <Button isIconOnly variant="flat" radius="full" aria-label="How to play" onPress={() => setIsHelpOpen(true)}>
+            <LuCircleHelp className="size-5" />
+          </Button>
+        </header>
 
-                if(win){
-                    setWin(true)
-                }
-                new Promise(resolve => setTimeout(resolve, 1400)).then(
-                    () => setWaiting(false)
-                )
-            }).catch(err=>{
-                console.log(err)
-                setWaiting(false)
-            })
-        }
-    }
-
-    return(
-        <div className="w-full">
-            <div className="flex flex-col gap-2 w-full items-center"> 
-                {
-                    Array.from({ length: rows }, (_, i) => (
-                        <div key={i}>
-                        {
-                            words.length > i ?
-                            <StaticBordRow k={i} word={words[i]} result={result[i]} columns={columns}/>:
-                            words.length === i && !win && !waiting?
-                            <ActiveBordRow k={i} addWord={addWord} columns={columns}/>:
-                            <StaticBordRow k={i} columns={columns}/>
-                        }
-                        </div>
-                    ))
-                }
-                <div className="text-center">{win? "you win" : words.length === 6? "you lose" : ""}</div>
-            </div>
-            <Keyboard AddWord={addWord}/>
+        <div className="relative flex h-8 items-center justify-center" role="status" aria-live="assertive">
+          <AnimatePresence>
+            {message && (
+              <motion.p
+                key={message}
+                initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="absolute whitespace-nowrap rounded-lg bg-foreground px-4 py-1.5 text-sm font-semibold text-background shadow-lg"
+              >
+                {message}
+              </motion.p>
+            )}
+          </AnimatePresence>
         </div>
-    )
+
+        <div role="grid" aria-label="Guess board" className="flex flex-col" style={{ gap: "var(--tile-gap)" }}>
+          {Array.from({ length: MAX_ATTEMPTS }, (_, row) => (
+            <BoardRow
+              key={row}
+              rowNumber={row + 1}
+              letters={game.guesses[row] ?? (row === activeRow ? current : "")}
+              states={game.results[row]}
+              reveal={row === revealRow}
+              win={game.status === "won"}
+              shake={row === activeRow && isShaking}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-auto flex w-full flex-col justify-end pt-2">
+        {isFinished ? (
+          <ResultPanel game={game} />
+        ) : (
+          <Keyboard keyStates={keyStates} onLetter={typeLetter} onEnter={submit} onBackspace={backspace} />
+        )}
+      </div>
+
+      <HowToPlayModal isOpen={isHelpOpen} onOpenChange={setIsHelpOpen} />
+    </div>
+  );
 }

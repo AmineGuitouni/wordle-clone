@@ -1,62 +1,45 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { NextUiProviders } from "@/contexts/NextUiProv";
-import { AOSProvider } from "@/contexts/AOSProvider";
-import AppSession from "@/contexts/AppSession";
-
-import NavBar from "@/components/navbar/navBar";
-import { GoDot } from "react-icons/go";
-import { GoDotFill } from "react-icons/go";
+import type { Metadata, Viewport } from "next";
+import { Inter, Space_Grotesk } from "next/font/google";
 import { auth } from "@/auth";
+import NavBar from "@/components/layout/NavBar";
+import { Providers } from "@/providers/Providers";
+import "./globals.css";
+
+const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "wordle",
-  description: "wordle game",
+  // Needed for absolute Open Graph URLs off Vercel; when unset, Next.js falls back to Vercel's own URL variables.
+  metadataBase: process.env.NEXT_PUBLIC_SITE_URL ? new URL(process.env.NEXT_PUBLIC_SITE_URL) : undefined,
+  title: {
+    default: "Guess the Word — a daily word puzzle",
+    template: "%s · Guess the Word",
+  },
+  description:
+    "Guess the hidden five-letter word in six tries. A new word every day, no sign-up, and a live leaderboard.",
 };
 
-const numDots = Math.floor(Math.random() * 20) + 20;
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#070a14" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f6fc" },
+  ],
+};
 
-const dots = Array.from({ length: numDots }, (_, index) => ({
-  id: index,
-  x: Math.random() * 100,
-  y: Math.random() * 100,
-}));
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+  const user = session?.user ? { name: session.user.name ?? "Guest", image: session.user.image ?? null } : null;
 
-export default async function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const session = await auth()
   return (
-    <html lang="en" suppressHydrationWarning>
-      <AppSession session={session}>
-        <AOSProvider>
-          <body>
-            <NextUiProviders>
-              <div className="fixed bg-gradient-to-t from-indigo-500 bottom-0 w-full h-full opacity-15">
-              {dots.map((dot) => (
-                  <GoDot
-                    key={dot.id}
-                  className={`text-primary-500 text-3xl blur-sm`}
-                    style={{
-                      position: 'absolute',
-                      left: `${dot.x}%`,
-                      top: `${dot.y}%`,
-                    }}
-                  />
-                ))}
-              </div>
-              <main className="flex flex-col h-[100svh]">
-                <NavBar session={session}/>
-                <div className="w-full flex-grow max-h-[calc(100%-4rem)]">
-                  {children}
-                </div>
-              </main>
-            </NextUiProviders>
-          </body>
-        </AOSProvider>
-      </AppSession>
+    <html lang="en" className={`${sans.variable} ${display.variable}`} suppressHydrationWarning>
+      <body>
+        <Providers>
+          <div className="flex min-h-dvh flex-col">
+            <NavBar user={user} />
+            <main className="flex flex-1 flex-col">{children}</main>
+          </div>
+        </Providers>
+      </body>
     </html>
   );
 }
