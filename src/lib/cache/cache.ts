@@ -62,7 +62,7 @@ export class Cache {
       const raw = await this.run("get", () => this.store.get(this.key(key)), { retryable: true });
       return raw === null ? null : (JSON.parse(raw) as T);
     } catch (error) {
-      if (!(error instanceof CacheUnavailableError)) await this.del(key); // unparseable value: evict it
+      if (!CacheUnavailableError.is(error)) await this.del(key); // unparseable value: evict it
       return null;
     }
   }

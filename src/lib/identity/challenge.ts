@@ -69,7 +69,7 @@ export async function verifyChallenge(
     if (!firstUse) return { ok: false, reason: "replayed" };
   } catch (error) {
     // Fail open on a cache outage: the challenge still expires on its own and issuance is rate limited per IP.
-    if (!(error instanceof CacheUnavailableError)) throw error;
+    if (!CacheUnavailableError.is(error)) throw error;
   }
   return { ok: true };
 }

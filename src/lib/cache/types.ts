@@ -33,4 +33,12 @@ export class CacheUnavailableError extends Error {
     super(message, options);
     this.name = "CacheUnavailableError";
   }
+
+  /**
+   * Use instead of `instanceof`. The bundler can load this module more than once (RSC and server-action layers,
+   * hot reloads) while the cache instance is shared through `globalThis`, so each copy has its own class identity.
+   */
+  static is(error: unknown): error is CacheUnavailableError {
+    return error instanceof Error && error.name === "CacheUnavailableError";
+  }
 }

@@ -52,7 +52,7 @@ export async function consumeRateLimit(
       retryAfterSeconds: allowed ? 0 : ttlSeconds,
     };
   } catch (error) {
-    if (!(error instanceof CacheUnavailableError) || !failOpen) throw error;
+    if (!CacheUnavailableError.is(error) || !failOpen) throw error;
     return { allowed: true, limit: policy.limit, remaining: policy.limit, retryAfterSeconds: 0 };
   }
 }

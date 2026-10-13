@@ -61,6 +61,18 @@ describe("consumeRateLimit", () => {
       expect(result).toMatchObject({ allowed: true, remaining: 3 });
     });
 
+    it("fails open even when the error comes from another copy of the bundled error class", async () => {
+      // The bundler can load the cache module twice (RSC vs server-action layers); `instanceof` fails across copies.
+      class OtherCopy extends Error {
+        name = "CacheUnavailableError";
+      }
+      const cache = {
+        incr: () => Promise.reject(new OtherCopy("Cache incr skipped: circuit open")),
+      } as unknown as Cache;
+
+      expect(await consumeRateLimit(policy, "user", { cache })).toMatchObject({ allowed: true });
+    });
+
     it("can fail closed", async () => {
       await expect(consumeRateLimit(policy, "user", { cache: broken(), failOpen: false })).rejects.toThrow(
         "Cache incr failed",
