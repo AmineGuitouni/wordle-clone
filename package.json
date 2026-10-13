@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@heroui/react": "~2.7.11",
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.0.3",
     "clsx": "^2.1.1",
     "framer-motion": "^13.1.0",
     "ioredis": "^6.0.0",
@@ -42,6 +44,10 @@
     "tailwindcss": "^3.4.19",
     "typescript": "^6.0.3",
     "vitest": "^5.0.4"
+  },
+  "overrides": {
+    "@simplewebauthn/browser": "$@simplewebauthn/browser",
+    "@simplewebauthn/server": "$@simplewebauthn/server"
   },
   "description": "A Wordle-style daily word game built with Next.js, Auth.js and MongoDB.",
   "engines": {

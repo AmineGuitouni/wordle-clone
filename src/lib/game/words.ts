@@ -132,7 +132,13 @@ export function isValidWord(word: string): boolean {
   return WORD_SET.has(word.toLowerCase());
 }
 
-export function pickRandomWord(exclude?: string): string {
-  const candidates = exclude ? WORDS.filter((word) => word !== exclude) : WORDS;
+/**
+ * A random word other than `exclude` (the previous answer), preferring words not in `used`. Once every word has been
+ * used, any word but the previous one can come back.
+ */
+export function pickRandomWord(exclude?: string, used: ReadonlySet<string> = new Set()): string {
+  const allowed = exclude ? WORDS.filter((word) => word !== exclude) : WORDS;
+  const fresh = allowed.filter((word) => !used.has(word));
+  const candidates = fresh.length > 0 ? fresh : allowed;
   return candidates[Math.floor(Math.random() * candidates.length)];
 }

@@ -33,4 +33,21 @@ describe("pickRandomWord", () => {
       expect(pickRandomWord("world")).not.toBe("world");
     }
   });
+
+  it("prefers words that haven't been used", () => {
+    const used = new Set(WORDS.filter((word) => word !== "mount" && word !== "crane"));
+    for (let i = 0; i < 50; i++) {
+      expect(["mount", "crane"]).toContain(pickRandomWord("world", used));
+      expect(pickRandomWord("crane", used)).toBe("mount");
+    }
+  });
+
+  it("reuses words once all of them have been used, still never the previous one", () => {
+    const used = new Set(WORDS);
+    for (let i = 0; i < 200; i++) {
+      const word = pickRandomWord("world", used);
+      expect(isValidWord(word)).toBe(true);
+      expect(word).not.toBe("world");
+    }
+  });
 });

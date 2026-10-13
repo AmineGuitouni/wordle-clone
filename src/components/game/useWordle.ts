@@ -100,6 +100,7 @@ export function useWordle(initialGame: GameView) {
         results: [...previous.results, response.result],
         status: response.status,
         answer: response.answer,
+        provisional: response.provisional,
       }));
       setCurrent("");
       setIsRevealing(true);

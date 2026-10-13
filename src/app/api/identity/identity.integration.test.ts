@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { MongoClient, type Db } from "mongodb";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { GameDocument, WordDocument } from "@/lib/db";
+import type { GameDocument, IdentityDocument, WordDocument } from "@/lib/db";
 import { authorizeGuest } from "@/lib/identity/authorize";
 import { DEVICE_COOKIE, createDeviceId, encodeDeviceCookie } from "@/lib/identity/device";
 import { solveProof } from "@/lib/identity/pow";
@@ -95,6 +95,17 @@ describe.skipIf(!uri)("identity endpoint (MongoDB)", () => {
       expect(cookie).toMatch(new RegExp(`^${DEVICE_COOKIE}=[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]+$`));
     });
 
+    it("records when the identity was created, which decides when its wins start to rank", async () => {
+      const before = Date.now();
+      const { cookie } = await createIdentity("Alice");
+      const id = cookie.split("=")[1].split(".")[0];
+
+      const record = await db.collection<IdentityDocument>("identities").findOne({ _id: id });
+      expect(record).toMatchObject({ name: "Alice" });
+      expect(record!.createdAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(record!.createdAt.getTime()).toBeLessThanOrEqual(Date.now());
+    });
+
     it("issues the cookie as httpOnly, SameSite=Lax, long-lived and not cached", async () => {
       const ip = nextIp();
       const first = await post({ name: "Alice" }, { ip });
@@ -174,6 +185,24 @@ describe.skipIf(!uri)("identity endpoint (MongoDB)", () => {
       expect(refreshed.split("=")[1].split(".")[0]).toBe(cookie.split("=")[1].split(".")[0]);
     });
 
+    it("update their recorded name, and give identities from before records existed an old creation date", async () => {
+      const { cookie, ip } = await createIdentity("Alice");
+      await post({ name: "Alicia" }, { ip, cookie });
+      const id = cookie.split("=")[1].split(".")[0];
+      expect(await db.collection<IdentityDocument>("identities").findOne({ _id: id })).toMatchObject({
+        name: "Alicia",
+      });
+
+      // A cookie signed before identities were recorded: it must not suddenly look brand new.
+      const legacyId = createDeviceId();
+      const legacy = `${DEVICE_COOKIE}=${await encodeDeviceCookie(legacyId, SECRET)}`;
+      expect((await post({ name: "Veteran" }, { cookie: legacy })).body).toEqual({ status: "ok" });
+      expect(await db.collection<IdentityDocument>("identities").findOne({ _id: legacyId })).toMatchObject({
+        name: "Veteran",
+        createdAt: new Date(0),
+      });
+    });
+
     it("keep their game when they change their name, so the guess limit can't be reset", async () => {
       const { cookie, ip } = await createIdentity("Alice");
 
@@ -189,7 +218,7 @@ describe.skipIf(!uri)("identity endpoint (MongoDB)", () => {
       );
 
       expect(second!.id).toBe(first!.id);
-      const view = await service.getGameView(second!.id, "world");
+      const view = await service.getGameView(second!.id, await service.getTodaysRound());
       expect(view.guesses).toEqual(["CRANE"]); // progress survived the rename
       const game = await db.collection<GameDocument>("users-history").findOne({ userId: first!.id });
       expect(game?.name).toBe("Totally Someone Else");

@@ -22,6 +22,11 @@ Pick a name, get six tries to find the hidden five-letter word, and see how you 
   keyboard that tracks letter states, and physical-keyboard support.
 - **Guest accounts** — choose a display name and play; no email or password. Your browser keeps a signed device
   identity, so changing your name never gives you a fresh game.
+- **Passkeys to play on other devices** — save a passkey (Face ID, Touch ID, Windows Hello, your phone) and sign back in
+  as the same player anywhere, still without an email, a password or anything to remember.
+- **A leaderboard that is hard to game** — a fresh identity can't rank on the word that is already live, and an unused
+  spare identity can't rank on a network where someone already finished it (see
+  [Who counts on the leaderboard](#who-counts-on-the-leaderboard)).
 - **Abuse protection** — a self-hosted proof-of-work challenge before a new identity is issued, escalating per-IP
   limits, and per-player rate limiting on guesses (see [Identity & abuse protection](#identity--abuse-protection)).
 - **Daily leaderboard** ranked by a score that rewards fewer tries and faster solves.
@@ -65,11 +70,14 @@ sequenceDiagram
   dictionary validation. Server Actions are public endpoints, so input is re-validated there.
 - **Concurrency-safe writes.** A guess is appended with a compare-and-set on the stored guess count, so parallel or
   replayed requests cannot exceed the attempt limit or overwrite each other. A unique index on
-  `(userId, toDaysWord)` makes racing first guesses converge on one game. Both are covered by integration tests.
+  `(userId, roundId)` makes racing first guesses converge on one game. Both are covered by integration tests.
 - **Scoring** lives in [`src/lib/game/rules.ts`](src/lib/game/rules.ts) as pure, unit-tested functions using Wordle's
   two-pass algorithm (greens first, then yellows limited by the remaining count of each letter).
-- **Daily word.** The newest document in the `words` collection is today's word. A secured webhook rotates it (see
-  [Daily word rotation](#daily-word-rotation)); a brand-new database is seeded automatically on first use.
+- **Daily rounds.** Each document in the `words` collection is a round (an answer and when it went live); the newest
+  is today's. A secured webhook starts the next one (see [Daily word rotation](#daily-word-rotation)), and a brand-new
+  database is seeded automatically on first use. Games, leaderboards and network hashes belong to a **round**, not to
+  a word, so a word that comes back months later starts everyone on a clean slate. Games saved before rounds were
+  tracked are linked to their round automatically when the app starts.
 - **Leaderboard score** = `1e9 / (solveTimeMs + 10 000 × tries)`; only players who solved today's word are listed.
 
 ## Identity & abuse protection
@@ -108,8 +116,43 @@ sequenceDiagram
   (replay marker in Redis) and solved in a Web Worker, so no third-party captcha or account is needed. Difficulty starts at 16 bits (`POW_DIFFICULTY_BITS`, about 0.1 s on a laptop) and **doubles for every
   identity the same IP created recently** (up to 64×, about 8 s), so making identities in bulk gets expensive quickly.
 - **Rate limits** (fixed windows in Redis): 30 identity requests per IP per 10 minutes, 10 new identities per IP per
-  hour, and 30 guesses per player per minute. Returning devices don't count against the creation limit. A blocked
-  client gets `429` with `Retry-After`.
+  hour, 30 guesses per player per minute, 30 passkey sign-in requests per IP per 10 minutes and 20 passkey registration
+  requests per player per hour. Returning devices don't count against the creation limit. A blocked client gets `429`
+  with `Retry-After`.
+
+### Passkeys: the same player on every device
+
+An identity is a browser cookie, so on its own it can't follow a player to their phone. Instead of an email address,
+players can save a **passkey** from the result panel or the account menu (WebAuthn via
+[SimpleWebAuthn](https://simplewebauthn.dev)):
+
+- **Saving** (`/api/passkeys/register/*`, signed-in players only) creates a discoverable credential whose WebAuthn
+  user handle is the identity id. Passkey providers sync it (iCloud Keychain, Google Password Manager, 1Password, ...).
+- **Signing in** (`/api/passkeys/sign-in/*`, "Use a passkey" on the home page) needs no username: the device offers the
+  passkeys it holds for this site. A valid assertion gives the browser the **same** identity cookie (same games,
+  history and creation date), then the normal guest sign-in runs.
+- **Challenges are stateless and single use**, like the proof of work: the WebAuthn challenge is a signed token naming
+  the ceremony, the player (for registration), a nonce and an expiry; a Redis marker spends it once the response
+  verifies. Responses are checked against the request's origin and host name, and against the stored public key.
+- No user verification (PIN or biometrics) is required: a passkey here replaces a cookie, not a password. Credentials
+  are stored in the `passkeys` collection (public key, signature counter, transports).
+
+### Who counts on the leaderboard
+
+Anyone can get a fresh identity by clearing cookies, so the rules make that pointless for climbing the board, without
+collecting anything personal ([`src/lib/game/ranking.ts`](src/lib/game/ranking.ts)). A win is **provisional**,
+meaning only its player sees it, marked and at the place it would take, when either:
+
+1. **The identity is newer than the word.** "Lose, clear cookies, enter the answer" produces a brand-new identity, so it
+   can't rank on the word that is already live. New players rank from the next word.
+2. **It is a spare identity on a shared network.** The identity has never finished a game, and another identity on the
+   same network has already finished this word. Regulars build up history, so two regulars in one coffee shop (or on
+   a mobile carrier's shared address) both rank; an identity made in advance and kept unused does not.
+
+The network is compared through a keyed hash (HMAC of the IPv4 address or IPv6 `/64` prefix, mixed with the round
+id), stored per game. Raw IPs are never stored, and hashes from different rounds can't be linked. Identities record
+their creation time in the `identities` collection; identities from before that collection existed count as
+established.
 
 ### Redis cache service
 
@@ -150,18 +193,18 @@ docker run -d --name guess-the-word-redis -p 6379:6379 redis:7   # optional; the
 
 ### Environment variables
 
-| Variable               | Required | Description                                                                         |
-| ---------------------- | :------: | ----------------------------------------------------------------------------------- |
-| `MONGODB_URI`          |    ✅    | MongoDB connection string                                                           |
-| `MONGODB_DB`           |    ✅    | Database name                                                                       |
-| `AUTH_SECRET`          |    ✅    | Signs session cookies. Generate with `npx auth secret` or `openssl rand -base64 33` |
-| `WEBHOOK_SECRET_KEY`   |    ✅    | Authorises the daily word rotation webhook                                          |
-| `CRON_SECRET`          |  Vercel  | Same value as `WEBHOOK_SECRET_KEY`; Vercel Cron sends it as a bearer token          |
-| `REDIS_URL`            |    —     | `redis://` or `rediss://` URL. Without it a per-process in-memory cache is used     |
-| `CACHE_NAMESPACE`      |    —     | Key prefix (default `gtw`); lets staging and production share one Redis             |
-| `POW_DIFFICULTY_BITS`  |    —     | Base proof-of-work difficulty, 0–28 (default `16`)                                  |
-| `AUTH_TRUST_HOST`      |    —     | Set to `true` for any production run outside Vercel (`npm start`, Docker, a VPS)    |
-| `NEXT_PUBLIC_SITE_URL` |    —     | Public site URL for absolute link-preview (Open Graph) URLs; optional on Vercel     |
+| Variable               | Required | Description                                                                      |
+| ---------------------- | :------: | -------------------------------------------------------------------------------- |
+| `MONGODB_URI`          |    ✅    | MongoDB connection string                                                        |
+| `MONGODB_DB`           |    ✅    | Database name                                                                    |
+| `AUTH_SECRET`          |    ✅    | Signs sessions, device cookies, challenges and network hashes. `npx auth secret` |
+| `WEBHOOK_SECRET_KEY`   |    ✅    | Authorises the daily word rotation webhook                                       |
+| `CRON_SECRET`          |  Vercel  | Same value as `WEBHOOK_SECRET_KEY`; Vercel Cron sends it as a bearer token       |
+| `REDIS_URL`            |    —     | `redis://` or `rediss://` URL. Without it a per-process in-memory cache is used  |
+| `CACHE_NAMESPACE`      |    —     | Key prefix (default `gtw`); lets staging and production share one Redis          |
+| `POW_DIFFICULTY_BITS`  |    —     | Base proof-of-work difficulty, 0–28 (default `16`)                               |
+| `AUTH_TRUST_HOST`      |    —     | Set to `true` for any production run outside Vercel (`npm start`, Docker, a VPS) |
+| `NEXT_PUBLIC_SITE_URL` |    —     | Public site URL for absolute link-preview (Open Graph) URLs; optional on Vercel  |
 
 The app builds without any of these set; they are only read when a request needs them. `AUTH_SECRET` also signs device
 identities and proof-of-work challenges, so rotating it signs everyone out and invalidates their device cookies.
@@ -217,7 +260,8 @@ curl -X POST https://your-app.example.com/api/webhooks/updatetodaysword \
   -H "key: $WEBHOOK_SECRET_KEY"
 ```
 
-The new word is never the same as the previous one, and everyone starts a fresh game.
+The new word is never the same as the previous one and, until all ~1 000 words have had a turn, never a word that was
+used before. Everyone starts a fresh game.
 
 **On Vercel** the schedule is already configured in [`vercel.json`](vercel.json): a `GET` to the webhook every day at
 00:00 UTC. Vercel Cron authenticates with `Authorization: Bearer $CRON_SECRET`, so set `CRON_SECRET` to the same value
@@ -232,12 +276,14 @@ yesterday's word until the next one.
 3. Import the repository into Vercel (or any Node host) and set the environment variables above.
 4. On Vercel the rotation cron comes from `vercel.json`; set `CRON_SECRET` equal to `WEBHOOK_SECRET_KEY`. Elsewhere,
    schedule a call to the webhook yourself.
+5. Settle on the production domain before players save passkeys: passkeys only work on the domain (and its
+   subdomains) they were created on, and they require HTTPS (or `localhost` during development).
 
 ## Project structure
 
 ```
 src/
-├── app/                  Routes: landing, /game (+ server action), /leaderboard, auth + webhook API routes
+├── app/                  Routes: landing, /game (+ server action), /leaderboard, auth, identity, passkey, webhook APIs
 ├── components/
 │   ├── game/             Board, tiles, keyboard, result panel, how-to-play dialog, useWordle hook
 │   ├── landing/ layout/  Landing demo board, navbar, theme toggle
@@ -245,7 +291,8 @@ src/
 ├── lib/
 │   ├── game/             rules · score · words (pure, tested) and service (MongoDB + cache, server-only)
 │   ├── cache/            CacheStore contract, Redis + in-memory drivers, the resilient Cache service
-│   ├── identity/         Device cookie, signing, proof of work, challenges, issuance logic, client flow + worker
+│   ├── game/ranking.ts   Who counts on the leaderboard (pure, tested)
+│   ├── identity/         Device cookie, signing, proof of work, passkeys (WebAuthn), identity records, client flows
 │   ├── db.ts             Lazy MongoDB client, typed collections, index bootstrap
 │   ├── rate-limit.ts     Fixed-window limiter and the app's policies
 │   ├── retry.ts          Exponential backoff with jitter (also drives Redis reconnects)
@@ -258,13 +305,18 @@ src/
 
 - The dictionary is small (~1 000 words) and doubles as the answer pool; separating "valid guesses" from "possible
   answers" would make the game more forgiving.
-- **No anonymous scheme can truly identify a person.** The identity belongs to a browser: clearing cookies, using a
-  private window or another device yields a new player. The proof of work and per-IP limits make doing that in
-  bulk costly, they don't make it impossible. In particular, browser-feasible difficulty is cheap for an attacker
-  running native code; the escalation per IP and the creation limit are what actually bound the damage. Real accounts
-  (for example "Sign in with GitHub" for leaderboard eligibility) are the only strong fix.
+- **No anonymous scheme can truly identify a person.** The identity belongs to a browser (or to whoever holds its
+  passkey): clearing cookies, using a private window or another device without the passkey yields a new player. The
+  ranking rules stop that from paying off on the current word, and the proof of work and per-IP limits make it costly
+  in bulk. What remains is deliberate effort: spare identities created in advance, given history by playing them every
+  day, and used from different networks (a VPN). Only real accounts would stop that.
+- The spare-identity check runs when a game finishes, so two spare identities on one network that finish at the same
+  moment can both rank. The check also relies on the client IP (see below).
+- Passkeys are bound to the domain they were created on. Moving the app to a new domain (or using a preview URL)
+  means passkeys saved on the old one won't work there.
 - IP-based limits rely on `x-forwarded-for` / `x-real-ip`, which are only trustworthy behind a proxy that sets them
   (Vercel and similar do). Players sharing one IP (a school, an office) share the creation allowance.
 - Rate limiting and replay protection **fail open** when Redis is unreachable, so the game stays playable. Use
   `consumeRateLimit(..., { failOpen: false })` where blocking is preferable.
-- Streaks and long-term stats still aren't possible without real accounts.
+- Streaks and long-term stats would be a natural next step now that identities can move between devices; they would
+  also make an identity more valuable to keep, which deters re-rolling further.

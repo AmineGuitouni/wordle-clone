@@ -19,7 +19,9 @@ import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
-import { LuLogOut } from "react-icons/lu";
+import { LuKeyRound, LuLogOut } from "react-icons/lu";
+import SavePasskeyModal from "@/components/auth/SavePasskeyModal";
+import { usePasskeySupport } from "@/components/auth/usePasskeySupport";
 import { cn } from "@/lib/utils";
 import BrandMark from "./BrandMark";
 import ThemeToggle from "./ThemeToggle";
@@ -34,6 +36,8 @@ const linkClass = (active: boolean) =>
 
 export default function NavBar({ user }: { user: NavUser | null }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPasskeyOpen, setIsPasskeyOpen] = useState(false);
+  const canUsePasskeys = usePasskeySupport();
   const pathname = usePathname();
 
   const links = [
@@ -94,16 +98,27 @@ export default function NavBar({ user }: { user: NavUser | null }) {
               <DropdownMenu
                 aria-label="Account"
                 onAction={(key) => {
+                  if (key === "passkey") setIsPasskeyOpen(true);
                   if (key === "sign-out") void signOut({ redirectTo: "/" });
                 }}
               >
-                <DropdownItem key="profile" isReadOnly className="cursor-default opacity-100" textValue={user.name}>
-                  <p className="text-xs text-foreground/60">Playing as</p>
-                  <p className="font-semibold">{user.name}</p>
-                </DropdownItem>
-                <DropdownItem key="sign-out" color="danger" className="text-danger" startContent={<LuLogOut />}>
-                  Sign out
-                </DropdownItem>
+                {[
+                  <DropdownItem key="profile" isReadOnly className="cursor-default opacity-100" textValue={user.name}>
+                    <p className="text-xs text-foreground/60">Playing as</p>
+                    <p className="font-semibold">{user.name}</p>
+                  </DropdownItem>,
+                  // Collections don't accept `false` children, so optional items are added to the array instead.
+                  ...(canUsePasskeys
+                    ? [
+                        <DropdownItem key="passkey" startContent={<LuKeyRound />}>
+                          Use on other devices
+                        </DropdownItem>,
+                      ]
+                    : []),
+                  <DropdownItem key="sign-out" color="danger" className="text-danger" startContent={<LuLogOut />}>
+                    Sign out
+                  </DropdownItem>,
+                ]}
               </DropdownMenu>
             </Dropdown>
           </NavbarItem>
@@ -131,6 +146,7 @@ export default function NavBar({ user }: { user: NavUser | null }) {
           </NavbarMenuItem>
         ))}
       </NavbarMenu>
+      {user && <SavePasskeyModal isOpen={isPasskeyOpen} onOpenChange={setIsPasskeyOpen} />}
     </Navbar>
   );
 }

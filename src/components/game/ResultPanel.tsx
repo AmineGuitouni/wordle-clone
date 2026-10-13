@@ -4,19 +4,34 @@ import { Button } from "@heroui/react";
 import { motion } from "framer-motion";
 import NextLink from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { LuCheck, LuShare2, LuTrophy } from "react-icons/lu";
+import { LuCheck, LuHourglass, LuShare2, LuTrophy } from "react-icons/lu";
+import SavePasskey from "@/components/auth/SavePasskey";
+import { usePasskeySupport } from "@/components/auth/usePasskeySupport";
 import { buildShareText, MAX_ATTEMPTS } from "@/lib/game/rules";
 import type { GameView } from "@/lib/game/types";
 
 const PRAISE = ["Genius!", "Magnificent!", "Impressive!", "Splendid!", "Great!", "Phew!"];
 
-export default function ResultPanel({ game }: { game: GameView }) {
+export default function ResultPanel({ game, hasPasskey }: { game: GameView; hasPasskey: boolean }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const canUsePasskeys = usePasskeySupport();
   const resetTimer = useRef<number | undefined>(undefined);
+  const panelRef = useRef<HTMLElement>(null);
   const won = game.status === "won";
   const tries = game.guesses.length;
 
   useEffect(() => () => window.clearTimeout(resetTimer.current), []);
+
+  // On short screens the panel can end below the fold; bring it into view once it has animated in.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const panel = panelRef.current;
+      if (panel && panel.getBoundingClientRect().bottom > window.innerHeight) {
+        panel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   async function share() {
     let outcome: "copied" | "failed" = "copied";
@@ -33,6 +48,7 @@ export default function ResultPanel({ game }: { game: GameView }) {
 
   return (
     <motion.section
+      ref={panelRef}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
@@ -58,6 +74,16 @@ export default function ResultPanel({ game }: { game: GameView }) {
         )}
       </div>
 
+      {game.provisional && (
+        <p className="flex items-start gap-2 rounded-xl bg-warning/10 px-3 py-2 text-left text-xs text-foreground/80">
+          <LuHourglass className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+          <span>
+            New players&apos; first results are provisional: only you see this one on the leaderboard. Your wins count
+            from the next word.
+          </span>
+        </p>
+      )}
+
       <div className="flex w-full gap-2">
         <Button
           fullWidth
@@ -81,6 +107,8 @@ export default function ResultPanel({ game }: { game: GameView }) {
           Leaderboard
         </Button>
       </div>
+
+      {canUsePasskeys && !hasPasskey && <SavePasskey compact />}
     </motion.section>
   );
 }

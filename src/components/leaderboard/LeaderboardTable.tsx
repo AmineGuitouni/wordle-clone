@@ -1,5 +1,5 @@
 import NextLink from "next/link";
-import { LuCrown, LuMedal } from "react-icons/lu";
+import { LuCrown, LuHourglass, LuMedal } from "react-icons/lu";
 import { formatDuration } from "@/lib/game/score";
 import type { LeaderboardEntry } from "@/lib/game/types";
 import { cn } from "@/lib/utils";
@@ -22,16 +22,28 @@ function initials(name: string): string {
   return letters.toUpperCase();
 }
 
-function Rank({ position }: { position: number }) {
-  const medal = MEDALS[position - 1];
+function Rank({ entry }: { entry: LeaderboardEntry }) {
+  if (entry.provisional) {
+    return (
+      <span
+        className="flex w-8 justify-center font-display text-sm font-bold text-foreground/40"
+        aria-label={entry.rank ? `Would rank ${entry.rank}` : "Not ranked"}
+      >
+        {entry.rank ? `(${entry.rank})` : "–"}
+      </span>
+    );
+  }
+  const medal = entry.rank ? MEDALS[entry.rank - 1] : undefined;
   return (
     <span className="flex w-8 justify-center font-display text-base font-bold text-foreground/60 sm:text-lg">
-      {medal ? <medal.Icon className={cn("size-6", medal.className)} aria-label={`Rank ${position}`} /> : position}
+      {medal ? <medal.Icon className={cn("size-6", medal.className)} aria-label={`Rank ${entry.rank}`} /> : entry.rank}
     </span>
   );
 }
 
 export default function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
+  const ownProvisional = entries.some((entry) => entry.provisional);
+
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-foreground/20 bg-content1/40 px-6 py-14 text-center">
@@ -68,9 +80,10 @@ export default function LeaderboardTable({ entries }: { entries: LeaderboardEntr
             className={cn(
               "grid grid-cols-[2rem_1fr_auto] items-center gap-2 sm:gap-3 border-b border-foreground/5 px-3 py-3 last:border-b-0 sm:grid-cols-[3rem_1fr_5rem_5rem_6rem] sm:px-5",
               entry.isCurrentUser && "bg-primary/10",
+              entry.provisional && "border-dashed bg-warning/5",
             )}
           >
-            <Rank position={index + 1} />
+            <Rank entry={entry} />
 
             <div className="flex min-w-0 items-center gap-3">
               <span
@@ -88,21 +101,44 @@ export default function LeaderboardTable({ entries }: { entries: LeaderboardEntr
                       You
                     </span>
                   )}
+                  {entry.provisional && (
+                    <span className="ml-1.5 hidden rounded-full bg-warning/20 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-warning-600 dark:text-warning sm:inline">
+                      Provisional
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-foreground/60 sm:hidden">
                   {entry.tries} {entry.tries === 1 ? "try" : "tries"} · {formatDuration(entry.timeMs)}
+                  {entry.provisional && (
+                    <span className="font-semibold text-warning-600 dark:text-warning"> · Provisional</span>
+                  )}
                 </p>
               </div>
             </div>
 
             <span className="hidden text-right tabular-nums sm:block">{entry.tries}</span>
             <span className="hidden text-right tabular-nums sm:block">{formatDuration(entry.timeMs)}</span>
-            <span className="text-right font-display font-bold tabular-nums text-primary">
+            <span
+              className={cn(
+                "text-right font-display font-bold tabular-nums",
+                entry.provisional ? "text-foreground/50" : "text-primary",
+              )}
+            >
               {entry.score.toLocaleString("en-US")}
             </span>
           </li>
         ))}
       </ol>
+
+      {ownProvisional && (
+        <p className="flex items-start gap-2 border-t border-foreground/10 px-5 py-3 text-xs text-foreground/70">
+          <LuHourglass className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+          <span>
+            Your result is provisional, so only you can see it, in brackets at the place it would take. First results
+            don&apos;t count; your wins are ranked from the next word.
+          </span>
+        </p>
+      )}
     </div>
   );
 }

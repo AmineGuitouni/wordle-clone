@@ -7,18 +7,25 @@ export type GameView = {
   status: GameStatus;
   /** Only revealed once the player has lost. */
   answer: string | null;
+  /** A win that is shown to its player but doesn't count on the leaderboard (see lib/game/ranking). */
+  provisional: boolean;
 };
 
 export type GuessError =
   "unauthenticated" | "rate_limited" | "invalid_word" | "game_over" | "out_of_sync" | "server_error";
 
 export type GuessResult =
-  { ok: true; result: TileState[]; status: GameStatus; answer: string | null } | { ok: false; error: GuessError };
+  | { ok: true; result: TileState[]; status: GameStatus; answer: string | null; provisional: boolean }
+  | { ok: false; error: GuessError };
 
 export type LeaderboardEntry = {
+  /** Position on the board. For a provisional entry, where it would place; null if that is past the top list. */
+  rank: number | null;
   name: string;
   tries: number;
   timeMs: number;
   score: number;
   isCurrentUser: boolean;
+  /** Only ever the viewer's own entry: other players' provisional wins are not shown. */
+  provisional: boolean;
 };

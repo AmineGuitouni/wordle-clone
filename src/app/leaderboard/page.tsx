@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import LeaderboardTable from "@/components/leaderboard/LeaderboardTable";
-import { getLeaderboard, getTodaysWord } from "@/lib/game/service";
+import { getLeaderboard, getTodaysRound } from "@/lib/game/service";
 
 export const metadata: Metadata = { title: "Leaderboard" };
 export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
-  const [session, answer] = await Promise.all([auth(), getTodaysWord()]);
-  const entries = await getLeaderboard(answer, session?.user?.id);
+  const [session, round] = await Promise.all([auth(), getTodaysRound()]);
+  const entries = await getLeaderboard(round, session?.user?.id);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:py-12">

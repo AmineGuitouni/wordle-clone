@@ -12,7 +12,7 @@ import Keyboard from "./Keyboard";
 import ResultPanel from "./ResultPanel";
 import { useWordle } from "./useWordle";
 
-export default function GameBoard({ initialGame }: { initialGame: GameView }) {
+export default function GameBoard({ initialGame, hasPasskey }: { initialGame: GameView; hasPasskey: boolean }) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const {
     game,
@@ -89,7 +89,7 @@ export default function GameBoard({ initialGame }: { initialGame: GameView }) {
 
       <div className="mt-auto flex w-full flex-col justify-end pt-2 short:mt-0 short:w-[min(26rem,50vw)] short:pt-0">
         {isFinished ? (
-          <ResultPanel game={game} />
+          <ResultPanel game={game} hasPasskey={hasPasskey} />
         ) : (
           <Keyboard
             keyStates={keyStates}

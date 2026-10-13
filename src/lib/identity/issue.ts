@@ -6,6 +6,7 @@ import { normalizeGuestName } from "@/lib/validation";
 import { createChallenge, verifyChallenge, type Challenge, type ChallengeFailure } from "./challenge";
 import { createDeviceId, readDeviceId } from "./device";
 import { difficultyFor } from "./policy";
+import { recordNewIdentity, recordReturningIdentity } from "./store";
 
 export type IdentityResult =
   | { kind: "identified"; deviceId: string; isNew: boolean }
@@ -43,7 +44,7 @@ export async function issueIdentity({ headers, body }: { headers: Headers; body:
 
   const existing = await readDeviceId(headers.get("cookie"));
   if (existing) {
-    await renamePlayer(existing, name);
+    await Promise.all([renamePlayer(existing, name), recordReturningIdentity(existing, name)]);
     return { kind: "identified", deviceId: existing, isNew: false };
   }
 
@@ -65,5 +66,7 @@ export async function issueIdentity({ headers, body }: { headers: Headers; body:
     if (!creations.allowed) return { kind: "rate_limited", retryAfterSeconds: creations.retryAfterSeconds };
   }
 
-  return { kind: "identified", deviceId: createDeviceId(), isNew: true };
+  const deviceId = createDeviceId();
+  await recordNewIdentity(deviceId, name);
+  return { kind: "identified", deviceId, isNew: true };
 }

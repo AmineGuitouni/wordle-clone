@@ -1,15 +1,7 @@
-import { NextResponse } from "next/server";
-import { DEVICE_COOKIE, DEVICE_COOKIE_MAX_AGE_SECONDS, encodeDeviceCookie } from "@/lib/identity/device";
+import { json, rateLimited, setDeviceCookie } from "@/lib/identity/http";
 import { issueIdentity } from "@/lib/identity/issue";
 
 export const dynamic = "force-dynamic";
-
-const NO_STORE = { "Cache-Control": "no-store" };
-
-function isHttps(req: Request): boolean {
-  const proto = req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
-  return proto.split(",")[0].trim() === "https";
-}
 
 /**
  * Step one of guest sign-in. Establishes (or recognises) this browser's device identity and the display name;
@@ -31,31 +23,21 @@ export async function POST(req: Request) {
 
     switch (result.kind) {
       case "identified": {
-        const response = NextResponse.json({ status: "ok" }, { headers: NO_STORE });
-        response.cookies.set(DEVICE_COOKIE, await encodeDeviceCookie(result.deviceId), {
-          httpOnly: true,
-          sameSite: "lax",
-          secure: isHttps(req),
-          path: "/",
-          // Re-issued on every sign-in, so the one-year lifetime slides forward for active players.
-          maxAge: DEVICE_COOKIE_MAX_AGE_SECONDS,
-        });
+        const response = json({ status: "ok" });
+        await setDeviceCookie(response, result.deviceId, req);
         return response;
       }
       case "challenge_required":
-        return NextResponse.json({ status: "challenge_required", challenge: result.challenge }, { headers: NO_STORE });
+        return json({ status: "challenge_required", challenge: result.challenge });
       case "invalid_name":
       case "invalid_challenge":
         // The specific failure reason stays server-side: it would only help someone probing for weaknesses.
-        return NextResponse.json({ error: result.kind }, { status: 400, headers: NO_STORE });
+        return json({ error: result.kind }, 400);
       case "rate_limited":
-        return NextResponse.json(
-          { error: result.kind, retryAfterSeconds: result.retryAfterSeconds },
-          { status: 429, headers: { ...NO_STORE, "Retry-After": String(result.retryAfterSeconds) } },
-        );
+        return rateLimited(result.retryAfterSeconds);
     }
   } catch (error) {
     console.error("Identity request failed", error);
-    return NextResponse.json({ error: "server_error" }, { status: 500, headers: NO_STORE });
+    return json({ error: "server_error" }, 500);
   }
 }

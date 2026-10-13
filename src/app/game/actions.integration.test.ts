@@ -7,6 +7,8 @@ import { RATE_LIMITS } from "@/lib/rate-limit";
 // The real Auth.js session needs a request context; everything else in the action runs for real.
 let currentUser: { id: string; name: string } | null = null;
 vi.mock("@/auth", () => ({ auth: async () => (currentUser ? { user: currentUser } : null) }));
+// The action reads the client IP from the request headers, which only exist inside a real request.
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-forwarded-for": "203.0.113.50" }) }));
 
 /** The submitGuess server action end to end (session, rate limit, validation, persistence). Needs TEST_MONGODB_URI. */
 const uri = process.env.TEST_MONGODB_URI;
@@ -20,8 +22,10 @@ describe.skipIf(!uri)("submitGuess server action", () => {
   const saved: Record<string, string | undefined> = {};
 
   beforeAll(async () => {
-    for (const key of ["MONGODB_URI", "MONGODB_DB", "REDIS_URL", "CACHE_NAMESPACE"]) saved[key] = process.env[key];
+    for (const key of ["MONGODB_URI", "MONGODB_DB", "REDIS_URL", "CACHE_NAMESPACE", "AUTH_SECRET"])
+      saved[key] = process.env[key];
     process.env.MONGODB_URI = uri;
+    process.env.AUTH_SECRET = "actions-integration-secret"; // keys the network hash of finished games
     process.env.MONGODB_DB = dbName;
     process.env.CACHE_NAMESPACE = `test-${randomUUID()}`;
     if (process.env.TEST_REDIS_URL) process.env.REDIS_URL = process.env.TEST_REDIS_URL;

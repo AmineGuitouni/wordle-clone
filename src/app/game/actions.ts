@@ -1,7 +1,9 @@
 "use server";
 
+import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { consumeRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request";
 import { normalizeGuess } from "@/lib/game/rules";
 import { submitGuess as saveGuess } from "@/lib/game/service";
 import type { GuessResult } from "@/lib/game/types";
@@ -27,6 +29,7 @@ export async function submitGuess(input: string): Promise<GuessResult> {
       userId: session.user.id,
       name: session.user.name ?? "Guest",
       guess,
+      ip: getClientIp(await headers()),
     });
   } catch (error) {
     console.error("submitGuess failed", error);

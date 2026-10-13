@@ -15,6 +15,10 @@ export const RATE_LIMITS = {
   identityCreations: { name: "identity-creations", limit: 10, windowSeconds: 60 * 60 },
   /** Guess submissions, per player. A real game needs at most six per day. */
   guesses: { name: "guesses", limit: 30, windowSeconds: 60 },
+  /** Passkey sign-in requests (options and verification), per IP. */
+  passkeySignIns: { name: "passkey-sign-ins", limit: 30, windowSeconds: 10 * 60 },
+  /** Passkey registration requests (options and verification), per player. */
+  passkeyRegistrations: { name: "passkey-registrations", limit: 20, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 export type RateLimitResult = {
